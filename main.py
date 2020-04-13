@@ -25,12 +25,13 @@ def sample_normal_pose(pos_scale, rot_scale):
 
 class Scene:
 
-    def __init__(self, env, task):
+    def __init__(self, env, task, mode):
         self._env = env
         self._scene_objs = {}
         self._task = task
         self._pos_scale = [0.005] * 3 # noise params
         self._rot_scale = [0.01] * 3
+        self._mode = mode
 
     def register_objs(self):
         '''
@@ -74,10 +75,16 @@ class Scene:
 
         self.update()
 
-    def update(self):
-        obs = self._task._scene.get_observation()
-        gripper_state = self._env._robot.gripper.get_open_amount()
-        self._task.step(obs.joint_positions.tolist() + [gripper_state])
+    def update(self, joint_positions=None, gripper_state=None):
+        if(gripper_state and joint_positions):
+            obs = self._task._scene.get_observation()
+            gripper_state = self._env._robot.gripper.get_open_amount()
+            if(self._mode == "abs_joint_pos"):
+                self._task.step(obs.joint_positions.tolist() + [gripper_state])
+        else:
+            if(self._mode == "abs_joint_pos"):
+                self._task.step(joint_positions.tolist() + [gripper_state])
+
 
     def get_noisy_poses(self):
 
@@ -98,7 +105,7 @@ class Scene:
 
         return obj_poses
 
-    def update_reset_positions(self):
+    def where_to_place(self):
         # TODO: where to place the objects while reset
 
 
@@ -113,14 +120,14 @@ class Scene:
 if __name__ == "__main__":
 
     # Initializes environment and task
+    mode = "abs_joint_pos" # ee_pose_plan
     action_mode = ActionMode(ArmActionMode.ABS_JOINT_POSITION) # See rlbench/action_modes.py for other action modes
     env = Environment(action_mode, '', ObservationConfig(), False, static_positions=False)
     task = env.get_task(PutGroceriesInCupboard) # available tasks: EmptyContainer, PlayJenga, PutGroceriesInCupboard, SetTheTable
     agent = RandomAgent()
     task.reset()
 
-
-    scene = Scene(env, task)  # Initialize our scene class
+    scene = Scene(env, task, mode)  # Initialize our scene class
     scene.register_objs() # Register all objects in the environment
 
     # TODO - RL Forward Policy
