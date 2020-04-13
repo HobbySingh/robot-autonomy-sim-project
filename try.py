@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
     if (True):
         # go to object
-        position = obj_poses['soup_grasp_point'][0:3]
+        # position = obj_poses['soup_grasp_point'][0:3]
         action = list(obj_poses['soup_grasp_point']) + [True]
         # path = env._robot.arm.get_path(position=position, quaternion=obj_poses['soup_grasp_point'][3:],
         #                                max_configs=500, trials=1000, algorithm=Algos.RRTstar)
