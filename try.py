@@ -8,7 +8,7 @@ from rlbench.observation_config import ObservationConfig
 from rlbench.tasks import *
 import ipdb
 from pyrep.const import ConfigurationPathAlgorithms as Algos
-
+import copy
 
 def skew(x):
     return np.array([[0, -x[2], x[1]],
@@ -60,22 +60,22 @@ class SceneObjects:
         for obj in objs:
             name = obj.get_name()
 
-            if ((name == 'crackers') or (name == 'crackers_visual')
-                    or (name == 'chocolate_jello') or (name == 'chocolate_jello_visual')
-                    or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
-                    or (name == 'tuna') or (name == 'tuna_visual')
-                    or (name == 'spam') or (name == 'spam_visual')
-                    or (name == 'coffee') or (name == 'coffee_visual')
-                    or (name == 'mustard') or (name == 'mustard_visual')
-                    or (name == 'sugar') or (name == 'sugar_visual')):
-                obj.set_position([x, 0.03, 0.1])
-                x += 0.01
-
-            if ((name == 'soup') or (name == 'soup_visual')):
-                obj.set_position([0.3, 0, 0.8])
-
-            if ((name == 'soup_grasp_point')):
-                obj.set_position([0.3, 0, 0.825])
+            # if ((name == 'crackers') or (name == 'crackers_visual')
+            #         or (name == 'chocolate_jello') or (name == 'chocolate_jello_visual')
+            #         or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
+            #         or (name == 'tuna') or (name == 'tuna_visual')
+            #         or (name == 'spam') or (name == 'spam_visual')
+            #         or (name == 'coffee') or (name == 'coffee_visual')
+            #         or (name == 'mustard') or (name == 'mustard_visual')
+            #         or (name == 'sugar') or (name == 'sugar_visual')):
+            #     obj.set_position([x, 0.03, 0.1])
+            #     x += 0.01
+            #
+            # if ((name == 'soup') or (name == 'soup_visual')):
+            #     obj.set_position([0.3, 0, 0.8])
+            #
+            # if ((name == 'soup_grasp_point')):
+            #     obj.set_position([0.3, 0, 0.825])
 
             if (name == 'cupboard'):
                 cupboard_pose = obj.get_position()
@@ -118,6 +118,11 @@ def execute_path(path, gripper_open):
         task.step(path_joints[i])
         i += 1
 
+def pre_pick(grasp_vect):
+    pick_point = grasp_vect
+    pick_point[2] += 0.3
+    return pick_point
+
 
 if __name__ == "__main__":
     action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN)  # See rlbench/action_modes.py for other action modes
@@ -130,34 +135,64 @@ if __name__ == "__main__":
     # Register all objects in the environment
     scene_objs = SceneObjects(env)
     # clear scene
-    # scene_objs.set_positions()
+    scene_objs.set_positions()
     # task.step(obs.gripper_pose.tolist() + [True])
 
     # get noisy poses
     obj_poses = scene_objs.get_noisy_poses()
 
-    if (True):
+    grasp_points = []
+    for k, v in obj_poses.items():
+        if 'grasp' not in k:
+            pass
+        else:
+            grasp_points.append(v)
+
+    grasp_points = sorted(grasp_points, key = lambda x: (x[0]**2 + x[1]**2))
+    print(grasp_points)
+    i = 0
+    while grasp_points:
         # go to object
-        position = obj_poses['soup_grasp_point'][0:3]
-        action = list(obj_poses['soup_grasp_point']) + [True]
-        # path = env._robot.arm.get_path(position=position, quaternion=obj_poses['soup_grasp_point'][3:],
-        #                                max_configs=500, trials=1000, algorithm=Algos.RRTstar)
-        # execute_path(path, gripper_open=True)
+        pick_point = pre_pick(grasp_points[i].copy())
+
+        action = list(pick_point) + [True]
         task.step(action)
 
-        # Close gripper
-        # task.step(obs.joint_positions.tolist() + [False])
-        #
-        # # attach object to gripper
-        # print("Grasp: ", env._robot.gripper.grasp(scene_objs.objs_dict['soup']))
-        # task.step(obs.joint_positions.tolist() + [False])
-        #
-        # # pick it up
-        # position[2] += 0.25
-        pose = obj_poses['soup_grasp_point']
-        pose[2] += 0.1
-        action = list(pose) + [False]
+        action = list(grasp_points[i]) + [True]
         task.step(action)
+
+        action = list(grasp_points[i]) + [False]
+        task.step(action)
+
+        action = list(pick_point) + [False]
+        task.step(action)
+
+        action = list(grasp_points[i]) + [False]
+        task.step(action)
+
+        action = list(grasp_points[i]) + [True]
+        task.step(action)
+
+        action = list(pick_point) + [True]
+        task.step(action)
+
+        # pose = grasp_points[i].copy()
+        # pose[2] += 0.1
+        # action = list(pose) + [False]
+        # task.step(action)
+        #
+        # action = list(grasp_points[i]) + [False]
+        # task.step(action)
+        #
+        # pose = grasp_points[i].copy()
+        # pose[2] += 0.1
+        # action = list(pose) + [True]
+        # task.step(action)
+        #
+        # action = list(grasp_points[i]) + [True]
+        # task.step(action)
+
+        i += 1
 
     while True:
         # Getting noisy object poses
