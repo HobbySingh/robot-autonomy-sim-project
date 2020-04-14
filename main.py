@@ -9,6 +9,7 @@ from pyrep.const import ConfigurationPathAlgorithms as Algos
 import copy
 import ipdb
 import pyrep
+import math
 
 def skew(x):
     return np.array([[0, -x[2], x[1]],
@@ -126,20 +127,27 @@ class Scene:
 
         bb0 = curr_obj.get_bounding_box()
         half_diag = (bb0[0]**2 + bb0[2]**2)**0.5
-        # h = curr_obj.get_pose()[2]
-        h = abs(bb0[4]*2)
+        h = curr_obj.get_pose()[2]-0.3
+        # h = abs(bb0[4]*2)
         name = curr_obj.get_name()
 
         while True:
             check = True
-            x = np.random.uniform(0,1)
-            y = np.random.uniform(-0.5,0.5)
+            a = np.random.uniform(0,0.25)
+            b = np.random.uniform(0, 0.4)
+            theta = np.random.uniform(0, 2*math.pi)
+
+            x = a*math.cos(theta) + 0.25
+            y = b*math.sin(theta)
+
+            print(x,y,h)
 
             obj_poses = self.get_noisy_poses()
             # action = [x,y,h] + list(obj_poses[name+'_grasp_point'][3:]) + [False]
             
             objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
             for obj in objs:
+                # print(obj.get_name())
                 pose = obj.get_pose()
                 dist = np.sum((pose[0:2]-np.array([x,y]))**2) ** 0.5
                 bb = obj.get_bounding_box()
@@ -152,7 +160,9 @@ class Scene:
             else:
                 break
         #[x, y, z, q1, q2, q3, q4]
+        # print(x,y)
         return np.array([x,y,h] + obj_grasp_point.get_pose()[3:].tolist())
+        # return np.array([x,y,h] + [0,0,0,1])
 
     def reset(self):
         '''
@@ -178,6 +188,7 @@ class Scene:
             try:
                 obj_name, gsp_pt = grasp_points.pop(0)
                 # compute pre-grasp point
+                print(obj_name)
                 print(gsp_pt)
                 pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
                 # move to pre-grasp point
@@ -194,13 +205,20 @@ class Scene:
                 # lift up to pre-grasp point
                 self.update(pre_gsp_pt, False)
 
-                place_pt = self.where_to_place(obj_name)
-                pre_place_pt = self.pre_grasp(place_pt.copy())
+                print("Trying new positions")
+                while True:
+                    place_pt = self.where_to_place(obj_name)
+                    print(place_pt)
+                    pre_place_pt = self.pre_grasp(place_pt.copy())
+                    try:
+                        print("Going to pre_place_pt with gripper close")
+                        self.update(pre_place_pt, False)
+                        print("Going to place_pt with gripper close")
+                        self.update(place_pt, False)
+                        break
+                    except:
+                        continue
 
-                print("Going to pre_place_pt with gripper close")
-                self.update(pre_place_pt, False)
-                print("Going to place_pt with gripper close")
-                self.update(place_pt, False)
                 print("opening gripper")
                 self.update(place_pt, True)
                 print("Going in air")
