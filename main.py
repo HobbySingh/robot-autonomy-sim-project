@@ -80,25 +80,26 @@ class Scene:
 
         self.update()
 
-    def update(self, joint_positions=None, gripper_state=None):
+    def update(self, joint_positions=None, gripper_state=None, ignore_collisions=False):
         obs = self._task._scene.get_observation()
         if(gripper_state != None):
             if(self._mode == "abs_joint_pos"):
                 path = env._robot.arm.get_path(position=joint_positions[0:3], quaternion=joint_positions[3:],
-                                               max_configs = 500, trials = 1000, algorithm=Algos.RRTstar)
+                                               max_configs = 500, trials = 1000, algorithm=Algos.BiTRRT,
+                                               ignore_collisions=ignore_collisions)
                 self.execute_path(path, gripper_state)
             else:
                 action = joint_positions.tolist() + [gripper_state]
-                print("Action ", action)
                 self._task.step(action)
                 # pass
         else:
             gripper_state = self._env._robot.gripper.get_open_amount()[0]
             if(self._mode == "abs_joint_pos"):
-                print(obs.joint_positions.tolist() + [gripper_state])
+                # print(obs.joint_positions.tolist() + [gripper_state])
                 self._task.step(obs.joint_positions.tolist() + [gripper_state])
             else:
-                self._task.step(obs.gripper_pose)
+                gripper_state = self._env._robot.gripper.get_open_amount()[0]
+                self._task.step(obs.gripper_pose.tolist() + [gripper_state])
 
 
     def get_noisy_poses(self):
@@ -109,12 +110,12 @@ class Scene:
             name = obj.get_name()
             pose = obj.get_pose()
 
-            pos, quat_wxyz = sample_normal_pose(self._pos_scale, self._rot_scale)
-            gt_quat_wxyz = quaternion(pose[6], pose[3], pose[4], pose[5])
-            perturbed_quat_wxyz = quat_wxyz * gt_quat_wxyz
+            # pos, quat_wxyz = sample_normal_pose(self._pos_scale, self._rot_scale)
+            # gt_quat_wxyz = quaternion(pose[6], pose[3], pose[4], pose[5])
+            # perturbed_quat_wxyz = quat_wxyz * gt_quat_wxyz
 
-            pose[:3] += pos
-            pose[3:] = [perturbed_quat_wxyz.x, perturbed_quat_wxyz.y, perturbed_quat_wxyz.z, perturbed_quat_wxyz.w]
+            # pose[:3] += pos
+            # pose[3:] = [perturbed_quat_wxyz.x, perturbed_quat_wxyz.y, perturbed_quat_wxyz.z, perturbed_quat_wxyz.w]
 
             obj_poses[name] = pose
 
@@ -127,9 +128,8 @@ class Scene:
 
         bb0 = curr_obj.get_bounding_box()
         half_diag = (bb0[0]**2 + bb0[2]**2)**0.5
-        h = curr_obj.get_pose()[2]-0.3
+        h = curr_obj.get_pose()[2]-0.25
         # h = abs(bb0[4]*2)
-        name = curr_obj.get_name()
 
         while True:
             check = True
@@ -140,7 +140,7 @@ class Scene:
             x = a*math.cos(theta) + 0.25
             y = b*math.sin(theta)
 
-            print(x,y,h)
+            # print(x,y,h)
 
             obj_poses = self.get_noisy_poses()
             # action = [x,y,h] + list(obj_poses[name+'_grasp_point'][3:]) + [False]
@@ -160,7 +160,6 @@ class Scene:
             else:
                 break
         #[x, y, z, q1, q2, q3, q4]
-        # print(x,y)
         return np.array([x,y,h] + obj_grasp_point.get_pose()[3:].tolist())
         # return np.array([x,y,h] + [0,0,0,1])
 
@@ -187,28 +186,29 @@ class Scene:
         while grasp_points:
             try:
                 obj_name, gsp_pt = grasp_points.pop(0)
-                # compute pre-grasp point
-                print(obj_name)
-                print(gsp_pt)
+                print("Grasping: ", obj_name[:-12])
                 pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
-                # move to pre-grasp point
-                print(pre_gsp_pt)
+
+                print("Move to pre-grasp point for: ", obj_name[:-12])
                 self.update(pre_gsp_pt, True)
-                # move to grasp-point
-                print("done")
-                print(gsp_pt)
+
+                print("Move to grasp point for: ", obj_name[:-12])
                 self.update(gsp_pt, True)
-                # close gripper
+
+                print("Close gripper for: ", obj_name[:-12])
                 self.update(gsp_pt, False)
-                # print("Grasp: ", env._robot.gripper.grasp(scene._scene_objs['soup']))
 
-                # lift up to pre-grasp point
-                self.update(pre_gsp_pt, False)
+                print("Attach object to gripper: " + obj_name[:-12], env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
+                self.update()
 
-                print("Trying new positions")
+                print("Just move up while holding: ", obj_name[:-12])
+                self.update(pre_gsp_pt, False, ignore_collisions=True)
+
+                ipdb.set_trace()
+
                 while True:
+                    print("Trying new positions")
                     place_pt = self.where_to_place(obj_name)
-                    print(place_pt)
                     pre_place_pt = self.pre_grasp(place_pt.copy())
                     try:
                         print("Going to pre_place_pt with gripper close")
@@ -217,15 +217,20 @@ class Scene:
                         self.update(place_pt, False)
                         break
                     except:
+                        print("Path not found")
                         continue
 
                 print("opening gripper")
-                self.update(place_pt, True)
+                self.update(place_pt, True, ignore_collisions=True)
+                print("DeGrasp: " + obj_name[:-12])
+                env._robot.gripper.release()
+                self.update()
                 print("Going in air")
                 self.update(pre_place_pt, True)
 
             except pyrep.errors.ConfigurationPathError:
                 print("Could Not find Path")
+                env._robot.gripper.release()
         return
 
     def pre_grasp(self, grasp_vect):
@@ -248,9 +253,16 @@ class Scene:
 if __name__ == "__main__":
 
     # Initializes environment and task
-    # mode = "abs_joint_pos" # ee_pose_plan
-    mode = "ee_pose_plan"
-    action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN) # See rlbench/action_modes.py for other action modes
+    mode = "abs_joint_pos" # ee_pose_plan
+    # mode = "ee_pose_plan"
+    if(mode == "ee_pose_plan"):
+        action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN) # See rlbench/action_modes.py for other action modes
+    elif(mode == "abs_joint_pos"):
+        action_mode = ActionMode(ArmActionMode.ABS_JOINT_POSITION)
+    else:
+        print("Mode Not Found")
+
+
     env = Environment(action_mode, '', ObservationConfig(), False, static_positions=False)
     task = env.get_task(PutGroceriesInCupboard) # available tasks: EmptyContainer, PlayJenga, PutGroceriesInCupboard, SetTheTable
     task.reset()
