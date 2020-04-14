@@ -119,9 +119,34 @@ class Scene:
 
         return obj_poses
 
-    def where_to_place(self):
+    def where_to_place(self, curr_obj):
         # TODO: where to place the objects while reset
-        return
+        bb0 = curr_obj.get_bounding_box()
+        half_diag = (bb0[0]**2 + bb0[2]**2)**0.5
+        h = curr_obj.get_pose()[2]
+        name = curr_obj.get_name()
+
+        while True:
+            check = True
+            x = np.random.uniform(0,1)
+            y = np.random.uniform(-0.5,0.5)
+            
+            action = [x,y,h] + list(obj_poses[name+'_grasp_point'][3:]) + [False]
+            
+            objs = scene_objs._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
+            for obj in objs:
+                pose = obj.get_pose()
+                dist = np.sum((pose[0:2]-np.array([x,y]))**2) ** 0.5
+                bb = obj.get_bounding_box()
+                if dist < half_diag + (bb[0]**2 + bb[2]**2)**0.5:
+                    check = False
+                    break
+            
+            if not check: 
+                continue
+            else:
+                break
+        return x,y,h
 
     def reset(self):
         '''
