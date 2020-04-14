@@ -119,21 +119,26 @@ class Scene:
 
         return obj_poses
 
-    def where_to_place(self, curr_obj):
+    def where_to_place(self, curr_obj_name):
         # TODO: where to place the objects while reset
+        curr_obj = self._scene_objs[curr_obj_name[:-12]]
+        obj_grasp_point = self._scene_objs[curr_obj_name]
+
         bb0 = curr_obj.get_bounding_box()
         half_diag = (bb0[0]**2 + bb0[2]**2)**0.5
-        h = curr_obj.get_pose()[2]
+        # h = curr_obj.get_pose()[2]
+        h = abs(bb0[4]*2)
         name = curr_obj.get_name()
 
         while True:
             check = True
             x = np.random.uniform(0,1)
             y = np.random.uniform(-0.5,0.5)
+
+            obj_poses = self.get_noisy_poses()
+            # action = [x,y,h] + list(obj_poses[name+'_grasp_point'][3:]) + [False]
             
-            action = [x,y,h] + list(obj_poses[name+'_grasp_point'][3:]) + [False]
-            
-            objs = scene_objs._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
+            objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
             for obj in objs:
                 pose = obj.get_pose()
                 dist = np.sum((pose[0:2]-np.array([x,y]))**2) ** 0.5
@@ -146,7 +151,8 @@ class Scene:
                 continue
             else:
                 break
-        return x,y,h
+        #[x, y, z, q1, q2, q3, q4]
+        return np.array([x,y,h] + obj_grasp_point.get_pose()[3:].tolist())
 
     def reset(self):
         '''
@@ -156,20 +162,21 @@ class Scene:
         '''
         obj_poses = self.get_noisy_poses()
         # import ipdb; ipdb.set_trace()
-        grasp_points = []
+        grasp_points = [] #[x, y, z, q1, q2, q3, q4]
         # iterate through all the objects
         for k, v in obj_poses.items():
             if 'grasp' not in k:
                 pass
             else:
-                grasp_points.append(v)
+                grasp_points.append((k,v))
 
         # sort object positions based on distance from the base
-        grasp_points = sorted(grasp_points, key = lambda x: (x[0]**2 + x[1]**2))
+        # grasp_points = sorted(grasp_points, key = lambda x: (x[0]**2 + x[1]**2))
+
 
         while grasp_points:
             try:
-                gsp_pt = grasp_points.pop(0)
+                obj_name, gsp_pt = grasp_points.pop(0)
                 # compute pre-grasp point
                 print(gsp_pt)
                 pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
@@ -182,11 +189,23 @@ class Scene:
                 self.update(gsp_pt, True)
                 # close gripper
                 self.update(gsp_pt, False)
+                # print("Grasp: ", env._robot.gripper.grasp(scene._scene_objs['soup']))
+
                 # lift up to pre-grasp point
                 self.update(pre_gsp_pt, False)
-                self.update(gsp_pt, False)
-                self.update(gsp_pt, True)
-                self.update(pre_gsp_pt, True)
+
+                place_pt = self.where_to_place(obj_name)
+                pre_place_pt = self.pre_grasp(place_pt.copy())
+
+                print("Going to pre_place_pt with gripper close")
+                self.update(pre_place_pt, False)
+                print("Going to place_pt with gripper close")
+                self.update(place_pt, False)
+                print("opening gripper")
+                self.update(place_pt, True)
+                print("Going in air")
+                self.update(pre_place_pt, True)
+
             except pyrep.errors.ConfigurationPathError:
                 print("Could Not find Path")
         return
@@ -212,7 +231,7 @@ if __name__ == "__main__":
 
     # Initializes environment and task
     # mode = "abs_joint_pos" # ee_pose_plan
-    mode = "abs_ee_pose_plan"
+    mode = "ee_pose_plan"
     action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN) # See rlbench/action_modes.py for other action modes
     env = Environment(action_mode, '', ObservationConfig(), False, static_positions=False)
     task = env.get_task(PutGroceriesInCupboard) # available tasks: EmptyContainer, PlayJenga, PutGroceriesInCupboard, SetTheTable
