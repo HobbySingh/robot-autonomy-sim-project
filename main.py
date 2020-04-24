@@ -196,7 +196,7 @@ class Scene:
                 self.update(gsp_pt, True)
 
                 print("Close gripper for: ", obj_name[:-12])
-                self.update(gsp_pt, False)
+                self.update(gsp_pt, False, ignore_collisions=True)
 
                 print("Attach object to gripper: " + obj_name[:-12], env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
                 self.update()
@@ -204,7 +204,7 @@ class Scene:
                 print("Just move up while holding: ", obj_name[:-12])
                 self.update(pre_gsp_pt, False, ignore_collisions=True)
 
-                ipdb.set_trace()
+                # ipdb.set_trace()
 
                 while True:
                     print("Trying new positions")
