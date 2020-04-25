@@ -10,6 +10,10 @@ import copy
 import ipdb
 import pyrep
 import math
+from rlbench.backend.spawn_boundary import SpawnBoundary
+from pyrep.objects.shape import Shape
+
+
 
 def skew(x):
     return np.array([[0, -x[2], x[1]],
@@ -37,6 +41,7 @@ class Scene:
         self._pos_scale = [0.005] * 3 # noise params
         self._rot_scale = [0.01] * 3
         self._mode = mode
+        self.boundary = SpawnBoundary([Shape('workspace')])
 
     def register_objs(self):
         '''
@@ -47,7 +52,6 @@ class Scene:
             name = obj.get_name()
             self._scene_objs[name] = obj
 
-        # self.update_reset_positions()
 
     def set_positions(self):
         objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
@@ -80,26 +84,32 @@ class Scene:
 
         self.update()
 
-    def update(self, joint_positions=None, gripper_state=None, ignore_collisions=False):
+    def update(self, joint_positions=None, move_arm = False, ignore_collisions=False):
+        '''
+        Finds path to target pose and executes it
+        Can be run with step_with_action false, it won't take any action
+        but will update the environment
+        :param joint_positions: joint positions/ gripper pose depending upon mode
+        :param step_with_action: actual path to be executed or just updating the env.
+        :param ignore_collisions:  ignore collisions or not
+        :return:
+        '''
         obs = self._task._scene.get_observation()
-        if(gripper_state != None):
+
+        if(move_arm):
             if(self._mode == "abs_joint_pos"):
                 path = env._robot.arm.get_path(position=joint_positions[0:3], quaternion=joint_positions[3:],
                                                max_configs = 500, trials = 1000, algorithm=Algos.BiTRRT,
                                                ignore_collisions=ignore_collisions)
-                self.execute_path(path, gripper_state)
+                self.execute_path(path)
             else:
-                action = joint_positions.tolist() + [gripper_state]
+                action = joint_positions.tolist()
                 self._task.step(action)
-                # pass
         else:
-            gripper_state = self._env._robot.gripper.get_open_amount()[0]
             if(self._mode == "abs_joint_pos"):
-                # print(obs.joint_positions.tolist() + [gripper_state])
-                self._task.step(obs.joint_positions.tolist() + [gripper_state])
+                self._task.step(obs.joint_positions.tolist())
             else:
-                gripper_state = self._env._robot.gripper.get_open_amount()[0]
-                self._task.step(obs.gripper_pose.tolist() + [gripper_state])
+                self._task.step(obs.gripper_pose.tolist())
 
 
     def get_noisy_poses(self):
@@ -129,7 +139,6 @@ class Scene:
         bb0 = curr_obj.get_bounding_box()
         half_diag = (bb0[0]**2 + bb0[2]**2)**0.5
         h = curr_obj.get_pose()[2]-0.25
-        # h = abs(bb0[4]*2)
 
         while True:
             check = True
@@ -170,10 +179,10 @@ class Scene:
          2. Generate a series of waypoints to pick the object and place it in its set loc.
         '''
         obj_poses = self.get_noisy_poses()
-        # import ipdb; ipdb.set_trace()
         grasp_points = [] #[x, y, z, q1, q2, q3, q4]
         # iterate through all the objects
         for k, v in obj_poses.items():
+            v[2] = v[2] + 0.035 # keep some distance b/w suction cup and object
             if 'grasp' not in k:
                 pass
             else:
@@ -186,47 +195,50 @@ class Scene:
         while grasp_points:
             try:
                 obj_name, gsp_pt = grasp_points.pop(0)
+
+                # h = self._scene_objs[obj_name[:-12]].get_pose()[2] + 0.1
+
                 print("Grasping: ", obj_name[:-12])
                 pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
 
                 print("Move to pre-grasp point for: ", obj_name[:-12])
-                self.update(pre_gsp_pt, True)
+                self.update(pre_gsp_pt, move_arm=True)
 
                 print("Move to grasp point for: ", obj_name[:-12])
-                self.update(gsp_pt, True)
-
-                print("Close gripper for: ", obj_name[:-12])
-                self.update(gsp_pt, False, ignore_collisions=True)
+                self.update(gsp_pt, move_arm=True)
 
                 print("Attach object to gripper: " + obj_name[:-12], env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
-                self.update()
+                self.update(move_arm=False)
 
                 print("Just move up while holding: ", obj_name[:-12])
-                self.update(pre_gsp_pt, False, ignore_collisions=True)
-
-                # ipdb.set_trace()
+                self.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
 
                 while True:
-                    print("Trying new positions")
-                    place_pt = self.where_to_place(obj_name)
+                    print("Trying new positions to randomly place")
+
+                    shape_obj = Shape(obj_name[:-12])
+                    status, place_pt, rotation = self.boundary.find_position_on_table(shape_obj, min_distance=0.1)
+                    place_pt[2] = gsp_pt[2] + 0.025
+                    place_pt = np.array(place_pt + [0.707,0.707,0,0])
+
                     pre_place_pt = self.pre_grasp(place_pt.copy())
                     try:
                         print("Going to pre_place_pt with gripper close")
-                        self.update(pre_place_pt, False)
+                        self.update(pre_place_pt, move_arm=True)
                         print("Going to place_pt with gripper close")
-                        self.update(place_pt, False)
+                        self.update(place_pt, move_arm=True)
                         break
                     except:
                         print("Path not found")
                         continue
 
                 print("opening gripper")
-                self.update(place_pt, True, ignore_collisions=True)
                 print("DeGrasp: " + obj_name[:-12])
                 env._robot.gripper.release()
                 self.update()
+
                 print("Going in air")
-                self.update(pre_place_pt, True)
+                self.update(pre_place_pt, move_arm=True)
 
             except pyrep.errors.ConfigurationPathError:
                 print("Could Not find Path")
@@ -238,13 +250,10 @@ class Scene:
         pre_grasp_point[2] += 0.3
         return pre_grasp_point
 
-    def execute_path(self, path, gripper_open):
+    def execute_path(self, path):
         path_points = path._path_points.reshape(-1, path._num_joints)
+        path_joints = path_points
 
-        if(gripper_open):
-            path_joints = np.hstack((path_points, np.ones((path_points.shape[0], 1))))
-        else:
-            path_joints = np.hstack((path_points, np.zeros((path_points.shape[0], 1))))
         i = 0
         while not path._path_done and i < path_joints.shape[0]:
             task.step(path_joints[i])
@@ -260,7 +269,7 @@ if __name__ == "__main__":
     elif(mode == "abs_joint_pos"):
         action_mode = ActionMode(ArmActionMode.ABS_JOINT_POSITION)
     else:
-        print("Mode Not Found")
+        raise Exception('Mode not Found')
 
 
     env = Environment(action_mode, '', ObservationConfig(), False, static_positions=False)
