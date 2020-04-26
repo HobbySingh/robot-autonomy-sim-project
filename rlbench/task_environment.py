@@ -18,6 +18,7 @@ from rlbench.action_modes import ArmActionMode, ActionMode
 from rlbench.demo import Demo
 from rlbench.observation_config import ObservationConfig
 from pyquaternion import Quaternion
+import ipdb
 
 _TORQUE_MAX_VEL = 9999
 _DT = 0.05
@@ -74,7 +75,6 @@ class TaskEnvironment(object):
 
     def reset(self) -> (List[str], Observation):
         logging.info('Resetting task: %s' % self._task.get_name())
-
         self._scene.reset()
         try:
             desc = self._scene.init_episode(

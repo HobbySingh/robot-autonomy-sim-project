@@ -35,7 +35,7 @@ class PutGroceriesInCupboard(Task):
     def init_episode(self, index: int) -> List[str]:
         # ipdb.set_trace()
         self.boundary.clear()
-        # [self.boundary.sample(g, min_distance=0.1) for g in self.groceries]
+        [self.boundary.sample(g, min_distance=0.1) for g in self.groceries]
         self.waypoint1.set_pose(self.grasp_points[index].get_pose())
         self.register_success_conditions(
             [DetectedCondition(self.groceries[index],
