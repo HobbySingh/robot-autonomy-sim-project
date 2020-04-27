@@ -62,4 +62,4 @@ def get_approach_pose(obj_name, obj_pose, bounding_box):
         target_transform = R.from_euler('xyz', target_transform, degrees=True)
         target_pose = np.matmul(target_pose, target_transform.as_matrix())
 
-    return obj_name, grasps
+    return grasps
