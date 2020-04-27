@@ -53,6 +53,7 @@ class Scene:
         self._pos_scale = [0.005] * 3 # noise params
         self._rot_scale = [0.01] * 3
         self._mode = mode
+        self._place_points = []
 
     def register_objs(self):
         '''
@@ -69,29 +70,31 @@ class Scene:
         x = 0
         for obj in objs:
             name = obj.get_name()
+            # if((name == 'chocolate_jello')):
+            #         # or (name == 'crackers') or (name == 'crackers_visual')
+            #         # or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
+            #         # or (name == 'tuna') or (name == 'tuna_visual')
+            #         # or (name == 'spam') or (name == 'spam_visual')
+            #         # or (name == 'coffee') or (name == 'coffee_visual')
+            #         # or (name == 'mustard') or (name == 'mustard_visual')
+            #         # or (name == 'sugar') or (name == 'sugar_visual')):
+            #
+            #     # obj.set_position([0.4357, 0, 1.38])
+            #     obj.rotate([0, 1.57, 0])
 
-            if((name == 'chocolate_jello')):
-                    # or (name == 'crackers') or (name == 'crackers_visual')
-                    # or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
-                    # or (name == 'tuna') or (name == 'tuna_visual')
-                    # or (name == 'spam') or (name == 'spam_visual')
-                    # or (name == 'coffee') or (name == 'coffee_visual')
-                    # or (name == 'mustard') or (name == 'mustard_visual')
-                    # or (name == 'sugar') or (name == 'sugar_visual')):
-
-                # obj.set_position([0.4357, 0, 1.38])
-                obj.rotate([0, 1.57, 0])
-
-            if((name == 'crackers')):
-                obj.rotate([0, 1.57, 0])
+            # if((name == 'crackers')):
+            #     obj.rotate([0, 1.57, 0])
             #
             # if((name == 'soup_grasp_point')):
             #     obj.set_position([0.3, 0, 0.825])
 
-            # if(name == 'cupboard'):
-            #     cupboard_pose = obj.get_position()
-            #     cupboard_pose[2] += 0.75
-            #     obj.set_position(cupboard_pose)
+            if(name == 'cupboard'):
+
+                cupboard_pose = obj.get_position()
+                print(cupboard_pose)
+                # import ipdb; ipdb.set_trace()
+                # cupboard_pose[2] += 0.75
+                # obj.set_position(cupboard_pose)
 
         self.update()
 
@@ -139,7 +142,6 @@ class Scene:
             # pose[3:] = [perturbed_quat_wxyz.x, perturbed_quat_wxyz.y, perturbed_quat_wxyz.z, perturbed_quat_wxyz.w]
 
             obj_poses[name] = pose
-
         return obj_poses
 
     def where_to_place(self, curr_obj_name):
@@ -164,7 +166,7 @@ class Scene:
 
             obj_poses = self.get_noisy_poses()
             # action = [x,y,h] + list(obj_poses[name+'_grasp_point'][3:]) + [False]
-            
+
             objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
             for obj in objs:
                 # print(obj.get_name())
@@ -174,8 +176,8 @@ class Scene:
                 if dist < half_diag + (bb[0]**2 + bb[2]**2)**0.5:
                     check = False
                     break
-            
-            if not check: 
+
+            if not check:
                 continue
             else:
                 break
@@ -184,21 +186,21 @@ class Scene:
         # return np.array([x,y,h] + [0,0,0,1])
 
 
-    def reset(self):
+    def reset(self, grasp_points):
         '''
         TODO
          1. Check for every box in a sequence, from closer to farther
          2. Generate a series of waypoints to pick the object and place it in its set loc.
         '''
-        obj_poses = self.get_noisy_poses()
-        grasp_points = [] #[x, y, z, q1, q2, q3, q4]
-        # iterate through all the objects
-        for k, v in obj_poses.items():
-            v[2] = v[2] + 0.035 # keep some distance b/w suction cup and object
-            if 'grasp' not in k:
-                pass
-            else:
-                grasp_points.append((k,v))
+        # obj_poses = self.get_noisy_poses()
+        # grasp_points = [] #[x, y, z, q1, q2, q3, q4]
+        # # iterate through all the objects
+        # for k, v in obj_poses.items():
+        #     v[2] = v[2] + 0.035 # keep some distance b/w suction cup and object
+        #     if 'grasp' not in k:
+        #         pass
+        #     else:
+        #         grasp_points.append((k,v))
 
         # sort object positions based on distance from the base
         # grasp_points = sorted(grasp_points, key = lambda x: (x[0]**2 + x[1]**2))
@@ -267,6 +269,60 @@ class Scene:
                 env._robot.gripper.release()
         return
 
+    def reset_to_cupboard(self):
+        '''
+        TODO
+         1. Check for every box in a sequence, from closer to farther
+         2. Generate a series of waypoints to pick the object and place it in its set loc.
+        '''
+        obj_poses = self.get_noisy_poses()
+        grasp_points = [] #[x, y, z, q1, q2, q3, q4]
+        for k, v in obj_poses.items():
+            v[2] = v[2] + 0.035 # keep some distance b/w suction cup and object
+            if 'grasp' not in k:
+                pass
+            else:
+                grasp_points.append((k,v))
+        place_pts = self.create_place_points()
+        for idx, element in enumerate(place_pts):
+            try:
+
+                obj_name, gsp_pt = grasp_points.pop(0)
+
+                print("Grasping: ", obj_name[:-12])
+                pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
+
+                print("Move to pre-grasp point for: ", obj_name[:-12])
+                self.update(pre_gsp_pt, move_arm=True)
+
+                print("Move to grasp point for: ", obj_name[:-12])
+                self.update(gsp_pt, move_arm=True, ignore_collisions=True)
+
+                print("Attach object to gripper: " + obj_name[:-12], env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
+                self.update(move_arm=False)
+
+                print("Just move up while holding: ", obj_name[:-12])
+                self.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
+
+
+
+
+                path_sequence = self.create_waypoint_sequence(element)
+                for waypoint in path_sequence:
+                    self.update(waypoint, move_arm=True, ignore_collisions=True)
+                env._robot.gripper.release()
+                self.update()
+                # print("Just move up while holding: ", obj_name[:-12])
+                # self.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
+
+
+            except pyrep.errors.ConfigurationPathError:
+                print("Could Not find Path")
+                env._robot.gripper.release()
+
+        return grasp_points
+
+
     def pre_grasp(self, grasp_vect):
         pre_grasp_point = grasp_vect
         pre_grasp_point[2] += 0.3
@@ -280,6 +336,27 @@ class Scene:
         while not path._path_done and i < path_joints.shape[0]:
             self._task.step(path_joints[i])
             i += 1
+
+    def create_place_points(self):
+        obj_poses = self.get_noisy_poses()
+        success_position = obj_poses['success']
+        place_points = self.get_mirror_poses(success_position, 0.1)
+        return place_points
+
+    def get_mirror_poses(self, base_pose, delta = 0.1):
+        left = np.array(base_pose)
+        right = np.array(base_pose)
+        left[1] -= delta
+        right[1] += delta
+        return [left, right, base_pose]
+
+    def create_waypoint_sequence(self, place_point):
+        obj_poses = self.get_noisy_poses()
+        waypoint3 = obj_poses['waypoint3']
+        waypoint4 = obj_poses['waypoint4']
+        place_point[0] = waypoint4[0]
+        place_point[2:] = waypoint4[2:]
+        return [waypoint3, waypoint4, place_point]
 
 if __name__ == "__main__":
 
@@ -303,9 +380,10 @@ if __name__ == "__main__":
 
     # TODO - RL Forward Policy
     scene.set_positions() # Run an episode of forward policy or set object locations manually
+    print(scene.create_place_points())
 
-    scene.reset()
-
+    remaining_objects = scene.reset_to_cupboard()
+    scene.reset(remaining_objects)
     while True:
 
         scene.update()
