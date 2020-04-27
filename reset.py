@@ -16,6 +16,8 @@ from util import get_approach_pose, get_approach_pose
 
 def reset_on_table(scene):
 
+    scene.preset_positions()
+
     env = scene._env
     objs = scene._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
 
@@ -29,16 +31,20 @@ def reset_on_table(scene):
     for obj in objs[0:9]: # With assumption that there is no collision in the process and none of the objects change pose unless we explicitly do that
 
         obj_name = obj.get_name()
+
+        if obj_name != 'chocolate_jello': break
         pose = obj.get_pose()
         bb = obj.get_bounding_box()
 
         initial_grasp_point = objs_by_name[obj_name + '_grasp_point'].get_pose()
+        # print('here')
+        # print(initial_grasp_point)
+        grasp_points, pre_grasp_points = get_approach_pose(obj_name,pose,bb, initial_grasp_point.copy(), incupboard = True)
         print('here')
-        print(initial_grasp_point)
-        grasp_points = get_approach_pose(obj_name,pose,bb, initial_grasp_point.copy(), incupboard = True)
-        print('here')
-        print(grasp_points[0])
-        print(initial_grasp_point)
+        print(grasp_points)
+        print(pre_grasp_points)
+        # print(grasp_points[0])
+        # print(initial_grasp_point)
         grasp_points[0] = initial_grasp_point
         grasp_points[0][2] += 0.035
 
@@ -49,13 +55,13 @@ def reset_on_table(scene):
             i += 1
             try:
                 gsp_pt = grasp_points.pop(0)
-                print(gsp_pt)
+                print('grasp point',gsp_pt)
 
                 print("Grasping: ", obj_name)
                 # pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
-                # pre_gsp_pt = pre_grasp_points.pop(0)
-                pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
-                print(pre_gsp_pt)
+                pre_gsp_pt = pre_grasp_points.pop(0)
+                # pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
+                print('pre-grasp',pre_gsp_pt)
 
                 print("Move to pre-grasp point for: ", obj_name)
                 scene.update(pre_gsp_pt, move_arm=True)
