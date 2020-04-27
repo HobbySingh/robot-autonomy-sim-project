@@ -2,25 +2,18 @@ from scipy.spatial.transform import Rotation as R
 import numpy as np
 
 def get_approach_pose(obj_name, obj_pose, bounding_box):
-    # print(k)
-    # print(obj_pose)
 
     grasps = []
 
     offset = 0.035
 
-    # print(obj_name)
-    # print(obj_pose[0:3])
-    # print(bounding_box)
     quart_obj = obj_pose[-4:]
     r = R.from_quat(quart_obj)
     rot_mat = r.as_matrix()
     r = r.as_euler('xyz', degrees=True)
-    print(r)
 
     pos_wrt_objframe = obj_pose[0:3]
 
-    # print(np.matmul(Rz.as_matrix(),Ry.as_matrix()))
     gripper_pose = R.from_euler('xyz', [-180,0,180], degrees=True)
 
     target_pose = rot_mat.copy()
