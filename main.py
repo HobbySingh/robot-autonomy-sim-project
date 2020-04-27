@@ -70,7 +70,7 @@ class Scene:
         for obj in objs:
             name = obj.get_name()
 
-            if((name == 'chocolate_jello') or (name == 'chocolate_jello_visual') ):
+            if((name == 'chocolate_jello') ):
                     # or (name == 'crackers') or (name == 'crackers_visual')
                     # or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
                     # or (name == 'tuna') or (name == 'tuna_visual')
@@ -79,12 +79,11 @@ class Scene:
                     # or (name == 'mustard') or (name == 'mustard_visual')
                     # or (name == 'sugar') or (name == 'sugar_visual')):
 
-                obj.set_position([0.4757, 0.0439, 1.4])
-                obj.rotate([1.57, 0, 1.57])
-                # x += 0.01
+                # obj.set_position([0.4357, 0, 1.38])
+                obj.rotate([0, 1.57, 0])
 
-            # if((name == 'soup') or (name == 'soup_visual')):
-            #     obj.set_position([0.3, 0, 0.8])
+            if((name == 'crackers')):
+                obj.rotate([0, 1.57, 0])
             #
             # if((name == 'soup_grasp_point')):
             #     obj.set_position([0.3, 0, 0.825])
@@ -303,7 +302,7 @@ if __name__ == "__main__":
     scene.register_objs() # Register all objects in the environment
 
     # TODO - RL Forward Policy
-    # scene.set_positions() # Run an episode of forward policy or set object locations manually
+    scene.set_positions() # Run an episode of forward policy or set object locations manually
 
     scene.reset()
 
