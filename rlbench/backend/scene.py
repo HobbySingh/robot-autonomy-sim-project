@@ -15,6 +15,7 @@ from rlbench.observation_config import ObservationConfig, CameraConfig
 from rlbench.backend.task import Task
 from rlbench.backend.robot import Robot
 import numpy as np
+import ipdb
 
 STEPS_BEFORE_EPISODE_START = 10
 
@@ -121,7 +122,6 @@ class Scene(object):
     def reset(self) -> None:
         """Resets the joint angles. """
         self._robot.gripper.release()
-
         arm, gripper = self._initial_robot_state
         self._pyrep.set_configuration_tree(arm)
         self._pyrep.set_configuration_tree(gripper)

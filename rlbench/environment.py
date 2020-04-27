@@ -125,7 +125,6 @@ class Environment(object):
         if self._pyrep is not None:
             raise RuntimeError('Already called launch!')
         self._pyrep = PyRep()
-        # ipdb.set_trace()
         self._pyrep.launch(join(DIR_PATH, TTT_FILE), headless=self._headless)
 
         arm_class, gripper_class, _ = SUPPORTED_ROBOTS[

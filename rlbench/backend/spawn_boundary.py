@@ -109,8 +109,8 @@ class BoundaryObject(object):
 
         new_pos = self._get_position_within_boundary(obj, obj_bbox)
 
-        obj.set_position(new_pos, self._boundary)
-        obj.rotate(list(rotation))
+        # obj.set_position(new_pos, self._boundary)
+        # obj.rotate(list(rotation))
         new_pos = np.array(new_pos)
 
         if not ignore_collisions:
@@ -154,18 +154,13 @@ class BoundaryObject(object):
 
         new_pos = self._get_position_within_boundary(obj, obj_bbox)
 
-        # obj.set_position(new_pos, self._boundary)
-        # obj.rotate(list(rotation))
-        # new_pos = np.array(new_pos)
-        # ipdb.set_trace()
-
         if not ignore_collisions:
             for contained_obj in self._contained_objects:
                 # Check for collision between each child
                 for cont_ob in contained_obj.get_objects_in_tree(
-                        exclude_base=False):
+                        exclude_base=True):
                     for placing_ob in obj.get_objects_in_tree(
-                            exclude_base=False):
+                            exclude_base=True):
                         if placing_ob.check_collision(cont_ob):
                             return -2, new_pos, rotation
                 dist = np.linalg.norm(
@@ -174,6 +169,8 @@ class BoundaryObject(object):
                     return -3, new_pos, rotation
             # self._contained_objects.append(obj)
         return 1, new_pos, rotation
+
+
 
 class SpawnBoundary(object):
 
@@ -219,6 +216,7 @@ class SpawnBoundary(object):
             raise BoundaryError(
                 'Could not place the object within the boundary due to '
                 'collision with other objects in the boundary.')
+
 
     def find_position_on_table(self, obj: Object, ignore_collisions=False,
                min_rotation=(0.0, 0.0, -3.14), max_rotation=(0.0, 0.0, 3.14),

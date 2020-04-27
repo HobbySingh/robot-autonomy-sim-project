@@ -12,8 +12,20 @@ import pyrep
 import math
 from rlbench.backend.spawn_boundary import SpawnBoundary
 from pyrep.objects.shape import Shape
+from scipy.spatial.transform import Rotation as R
 
 
+GROCERY_NAMES = [
+    'crackers',
+    'chocolate jello',
+    'strawberry jello',
+    'soup',
+    'tuna',
+    'spam',
+    'coffee',
+    'mustard',
+    'sugar',
+]
 
 def skew(x):
     return np.array([[0, -x[2], x[1]],
@@ -41,7 +53,6 @@ class Scene:
         self._pos_scale = [0.005] * 3 # noise params
         self._rot_scale = [0.01] * 3
         self._mode = mode
-        self.boundary = SpawnBoundary([Shape('workspace')])
 
     def register_objs(self):
         '''
@@ -59,28 +70,29 @@ class Scene:
         for obj in objs:
             name = obj.get_name()
 
-            # if((name == 'crackers') or (name == 'crackers_visual')
-            #         or (name == 'chocolate_jello') or (name == 'chocolate_jello_visual')
-            #         or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
-            #         or (name == 'tuna') or (name == 'tuna_visual')
-            #         or (name == 'spam') or (name == 'spam_visual')
-            #         or (name == 'coffee') or (name == 'coffee_visual')
-            #         or (name == 'mustard') or (name == 'mustard_visual')
-            #         or (name == 'sugar') or (name == 'sugar_visual')):
-            #
-            #     obj.set_position([x, 0.03, 0.1])
-            #     x += 0.01
-            #
+            if((name == 'chocolate_jello') or (name == 'chocolate_jello_visual') ):
+                    # or (name == 'crackers') or (name == 'crackers_visual')
+                    # or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
+                    # or (name == 'tuna') or (name == 'tuna_visual')
+                    # or (name == 'spam') or (name == 'spam_visual')
+                    # or (name == 'coffee') or (name == 'coffee_visual')
+                    # or (name == 'mustard') or (name == 'mustard_visual')
+                    # or (name == 'sugar') or (name == 'sugar_visual')):
+
+                obj.set_position([0.4757, 0.0439, 1.4])
+                obj.rotate([1.57, 0, 1.57])
+                # x += 0.01
+
             # if((name == 'soup') or (name == 'soup_visual')):
             #     obj.set_position([0.3, 0, 0.8])
             #
             # if((name == 'soup_grasp_point')):
             #     obj.set_position([0.3, 0, 0.825])
 
-            if(name == 'cupboard'):
-                cupboard_pose = obj.get_position()
-                cupboard_pose[2] += 0.75
-                obj.set_position(cupboard_pose)
+            # if(name == 'cupboard'):
+            #     cupboard_pose = obj.get_position()
+            #     cupboard_pose[2] += 0.75
+            #     obj.set_position(cupboard_pose)
 
         self.update()
 
@@ -172,6 +184,7 @@ class Scene:
         return np.array([x,y,h] + obj_grasp_point.get_pose()[3:].tolist())
         # return np.array([x,y,h] + [0,0,0,1])
 
+
     def reset(self):
         '''
         TODO
@@ -194,6 +207,7 @@ class Scene:
 
         while grasp_points:
             try:
+
                 obj_name, gsp_pt = grasp_points.pop(0)
 
                 # h = self._scene_objs[obj_name[:-12]].get_pose()[2] + 0.1
@@ -205,7 +219,7 @@ class Scene:
                 self.update(pre_gsp_pt, move_arm=True)
 
                 print("Move to grasp point for: ", obj_name[:-12])
-                self.update(gsp_pt, move_arm=True)
+                self.update(gsp_pt, move_arm=True, ignore_collisions=True)
 
                 print("Attach object to gripper: " + obj_name[:-12], env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
                 self.update(move_arm=False)
@@ -217,14 +231,23 @@ class Scene:
                     print("Trying new positions to randomly place")
 
                     shape_obj = Shape(obj_name[:-12])
-                    status, place_pt, rotation = self.boundary.find_position_on_table(shape_obj, min_distance=0.1)
-                    place_pt[2] = gsp_pt[2] + 0.025
-                    place_pt = np.array(place_pt + [0.707,0.707,0,0])
+                    # ipdb.set_trace()
+                    status, place_pt, rotation = self._task._task.boundary.find_position_on_table(shape_obj, min_distance=0.2)
+                    r  = R.from_euler('xyz', rotation)
+
+                    # ipdb.set_trace()
+                    place_pt[2] = gsp_pt[2] + 0.02
+                    place_pt = np.array(place_pt + (gsp_pt[3:]).tolist())
+                    # place_pt = np.array(place_pt + [r.as_quat()[3], r.as_quat()[2], 0, 0])
+                    # place_pt = np.array(place_pt + [ 0.707, 0.707, 0, 0])
+                    # if(obj_name[:-12] == 'chocolate_jello'):
+                    #     r = (R.from_euler('xyz', [1.57, 0, 1.57])).as_quat()
+                    #     place_pt = np.array([0.4757, 0.0439, 1.4, r[0], r[1], r[2], r[3]])
 
                     pre_place_pt = self.pre_grasp(place_pt.copy())
                     try:
                         print("Going to pre_place_pt with gripper close")
-                        self.update(pre_place_pt, move_arm=True)
+                        self.update(pre_place_pt, move_arm=True, ignore_collisions=False)
                         print("Going to place_pt with gripper close")
                         self.update(place_pt, move_arm=True)
                         break
@@ -256,13 +279,13 @@ class Scene:
 
         i = 0
         while not path._path_done and i < path_joints.shape[0]:
-            task.step(path_joints[i])
+            self._task.step(path_joints[i])
             i += 1
 
 if __name__ == "__main__":
 
     # Initializes environment and task
-    mode = "abs_joint_pos" # ee_pose_plan
+    mode = "abs_joint_pos"
     # mode = "ee_pose_plan"
     if(mode == "ee_pose_plan"):
         action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN) # See rlbench/action_modes.py for other action modes
@@ -280,7 +303,7 @@ if __name__ == "__main__":
     scene.register_objs() # Register all objects in the environment
 
     # TODO - RL Forward Policy
-    scene.set_positions() # Run an episode of forward policy or set object locations manually
+    # scene.set_positions() # Run an episode of forward policy or set object locations manually
 
     scene.reset()
 
