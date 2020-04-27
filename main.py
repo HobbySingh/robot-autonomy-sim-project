@@ -186,21 +186,21 @@ class Scene:
         # return np.array([x,y,h] + [0,0,0,1])
 
 
-    def reset(self, grasp_points):
+    def reset(self):
         '''
         TODO
          1. Check for every box in a sequence, from closer to farther
          2. Generate a series of waypoints to pick the object and place it in its set loc.
         '''
-        # obj_poses = self.get_noisy_poses()
-        # grasp_points = [] #[x, y, z, q1, q2, q3, q4]
-        # # iterate through all the objects
-        # for k, v in obj_poses.items():
-        #     v[2] = v[2] + 0.035 # keep some distance b/w suction cup and object
-        #     if 'grasp' not in k:
-        #         pass
-        #     else:
-        #         grasp_points.append((k,v))
+        obj_poses = self.get_noisy_poses()
+        grasp_points = [] #[x, y, z, q1, q2, q3, q4]
+        # iterate through all the objects
+        for k, v in obj_poses.items():
+            v[2] = v[2] + 0.035 # keep some distance b/w suction cup and object
+            if 'grasp' not in k:
+                pass
+            elif 'jello' not in k and 'sugar' not in k:
+                grasp_points.append((k,v))
 
         # sort object positions based on distance from the base
         # grasp_points = sorted(grasp_points, key = lambda x: (x[0]**2 + x[1]**2))
@@ -276,13 +276,19 @@ class Scene:
          2. Generate a series of waypoints to pick the object and place it in its set loc.
         '''
         obj_poses = self.get_noisy_poses()
+        waypoint3 = obj_poses['waypoint3']
+        waypoint4 = obj_poses['waypoint4']
         grasp_points = [] #[x, y, z, q1, q2, q3, q4]
         for k, v in obj_poses.items():
             v[2] = v[2] + 0.035 # keep some distance b/w suction cup and object
-            if 'grasp' not in k:
-                pass
+            if 'grasp' in k:
+                if 'jello' in k or 'sugar' in k:
+                    grasp_points.append((k,v))
+                else:
+                    pass
             else:
-                grasp_points.append((k,v))
+                continue
+
         place_pts = self.create_place_points()
         for idx, element in enumerate(place_pts):
             try:
@@ -305,21 +311,19 @@ class Scene:
                 self.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
 
 
-
-
-                path_sequence = self.create_waypoint_sequence(element)
+                path_sequence = self.create_waypoint_sequence(element.copy())
                 for waypoint in path_sequence:
-                    self.update(waypoint, move_arm=True, ignore_collisions=True)
+                    self.update(waypoint, move_arm=True, ignore_collisions=False)
                 env._robot.gripper.release()
-                self.update()
-                # print("Just move up while holding: ", obj_name[:-12])
-                # self.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
+                self.update(move_arm=False)
 
 
             except pyrep.errors.ConfigurationPathError:
                 print("Could Not find Path")
                 env._robot.gripper.release()
 
+        self.update(waypoint4, move_arm=True, ignore_collisions=True)
+        self.update(waypoint3, move_arm=True, ignore_collisions=True)
         return grasp_points
 
 
@@ -356,6 +360,7 @@ class Scene:
         waypoint4 = obj_poses['waypoint4']
         place_point[0] = waypoint4[0]
         place_point[2:] = waypoint4[2:]
+
         return [waypoint3, waypoint4, place_point]
 
 if __name__ == "__main__":
@@ -383,7 +388,7 @@ if __name__ == "__main__":
     print(scene.create_place_points())
 
     remaining_objects = scene.reset_to_cupboard()
-    scene.reset(remaining_objects)
+    scene.reset()
     while True:
 
         scene.update()
