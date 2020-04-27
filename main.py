@@ -6,14 +6,14 @@ from rlbench.action_modes import ArmActionMode, ActionMode
 from rlbench.observation_config import ObservationConfig
 from rlbench.tasks import *
 from pyrep.const import ConfigurationPathAlgorithms as Algos
-import copy
-import ipdb
 import pyrep
-import math
-from rlbench.backend.spawn_boundary import SpawnBoundary
 from pyrep.objects.shape import Shape
 from scipy.spatial.transform import Rotation as R
-
+import forward
+import reset
+from rlbench.backend.spawn_boundary import SpawnBoundary
+import copy
+import ipdb
 
 GROCERY_NAMES = [
     'crackers',
@@ -27,10 +27,12 @@ GROCERY_NAMES = [
     'sugar',
 ]
 
+
 def skew(x):
     return np.array([[0, -x[2], x[1]],
                      [x[2], 0, -x[0]],
                      [-x[1], x[0], 0]])
+
 
 def sample_normal_pose(pos_scale, rot_scale):
     '''
@@ -44,13 +46,14 @@ def sample_normal_pose(pos_scale, rot_scale):
 
     return pos, quat_wxyz
 
+
 class Scene:
 
     def __init__(self, env, task, mode):
         self._env = env
         self._scene_objs = {}
         self._task = task
-        self._pos_scale = [0.005] * 3 # noise params
+        self._pos_scale = [0.005] * 3  # noise params
         self._rot_scale = [0.01] * 3
         self._mode = mode
 
@@ -58,35 +61,28 @@ class Scene:
         '''
         This function creates a dictionary {obj_name : class_object of actual object}
         '''
-        objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
+        objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True,
+                                                                            first_generation_only=False)
         for obj in objs:
             name = obj.get_name()
             self._scene_objs[name] = obj
 
-
-    def set_positions(self):
-        objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
-        x = 0
+    def preset_positions(self):
+        '''
+        This function sets the positions of objects to desired locations
+        :return:
+        '''
+        objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True,
+                                                                            first_generation_only=False)
         for obj in objs:
             name = obj.get_name()
 
-            if((name == 'chocolate_jello')):
-                    # or (name == 'crackers') or (name == 'crackers_visual')
-                    # or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
-                    # or (name == 'tuna') or (name == 'tuna_visual')
-                    # or (name == 'spam') or (name == 'spam_visual')
-                    # or (name == 'coffee') or (name == 'coffee_visual')
-                    # or (name == 'mustard') or (name == 'mustard_visual')
-                    # or (name == 'sugar') or (name == 'sugar_visual')):
-
+            if ((name == 'chocolate_jello')):
                 # obj.set_position([0.4357, 0, 1.38])
                 obj.rotate([0, 1.57, 0])
 
-            if((name == 'crackers')):
+            if ((name == 'crackers')):
                 obj.rotate([0, 1.57, 0])
-            #
-            # if((name == 'soup_grasp_point')):
-            #     obj.set_position([0.3, 0, 0.825])
 
             # if(name == 'cupboard'):
             #     cupboard_pose = obj.get_position()
@@ -95,10 +91,10 @@ class Scene:
 
         self.update()
 
-    def update(self, joint_positions=None, move_arm = False, ignore_collisions=False):
+    def update(self, joint_positions=None, move_arm=False, ignore_collisions=False):
         '''
         Finds path to target pose and executes it
-        Can be run with step_with_action false, it won't take any action
+        Can be run with move_arm false, it won't take any action
         but will update the environment
         :param joint_positions: joint positions/ gripper pose depending upon mode
         :param step_with_action: actual path to be executed or just updating the env.
@@ -107,25 +103,28 @@ class Scene:
         '''
         obs = self._task._scene.get_observation()
 
-        if(move_arm):
-            if(self._mode == "abs_joint_pos"):
+        if (move_arm):
+            if (self._mode == "abs_joint_pos"):
                 path = env._robot.arm.get_path(position=joint_positions[0:3], quaternion=joint_positions[3:],
-                                               max_configs = 500, trials = 1000, algorithm=Algos.BiTRRT,
+                                               max_configs=500, trials=1000, algorithm=Algos.BiTRRT,
                                                ignore_collisions=ignore_collisions)
                 self.execute_path(path)
             else:
                 action = joint_positions.tolist()
                 self._task.step(action)
         else:
-            if(self._mode == "abs_joint_pos"):
+            if (self._mode == "abs_joint_pos"):
                 self._task.step(obs.joint_positions.tolist())
             else:
                 self._task.step(obs.gripper_pose.tolist())
 
-
     def get_noisy_poses(self):
-
-        objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
+        '''
+        This function returns noisy poses for the objects in the scene
+        :return:
+        '''
+        objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True,
+                                                                            first_generation_only=False)
         obj_poses = {}
         for obj in objs:
             name = obj.get_name()
@@ -142,67 +141,40 @@ class Scene:
 
         return obj_poses
 
-    def where_to_place(self, curr_obj_name):
-        # TODO: where to place the objects while reset
-        curr_obj = self._scene_objs[curr_obj_name[:-12]]
-        obj_grasp_point = self._scene_objs[curr_obj_name]
+    def pre_grasp(self, grasp_vect):
+        pre_grasp_point = grasp_vect
+        pre_grasp_point[2] += 0.3
+        return pre_grasp_point
 
-        bb0 = curr_obj.get_bounding_box()
-        half_diag = (bb0[0]**2 + bb0[2]**2)**0.5
-        h = curr_obj.get_pose()[2]-0.25
+    def execute_path(self, path):
+        path_points = path._path_points.reshape(-1, path._num_joints)
+        path_joints = path_points
 
-        while True:
-            check = True
-            a = np.random.uniform(0,0.25)
-            b = np.random.uniform(0, 0.4)
-            theta = np.random.uniform(0, 2*math.pi)
-
-            x = a*math.cos(theta) + 0.25
-            y = b*math.sin(theta)
-
-            # print(x,y,h)
-
-            obj_poses = self.get_noisy_poses()
-            # action = [x,y,h] + list(obj_poses[name+'_grasp_point'][3:]) + [False]
-            
-            objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
-            for obj in objs:
-                # print(obj.get_name())
-                pose = obj.get_pose()
-                dist = np.sum((pose[0:2]-np.array([x,y]))**2) ** 0.5
-                bb = obj.get_bounding_box()
-                if dist < half_diag + (bb[0]**2 + bb[2]**2)**0.5:
-                    check = False
-                    break
-            
-            if not check: 
-                continue
-            else:
-                break
-        #[x, y, z, q1, q2, q3, q4]
-        return np.array([x,y,h] + obj_grasp_point.get_pose()[3:].tolist())
-        # return np.array([x,y,h] + [0,0,0,1])
-
+        i = 0
+        while not path._path_done and i < path_joints.shape[0]:
+            self._task.step(path_joints[i])
+            i += 1
 
     def reset(self):
         '''
-        TODO
-         1. Check for every box in a sequence, from closer to farther
-         2. Generate a series of waypoints to pick the object and place it in its set loc.
+        Pick the objects from table/ cupboard and place them on random locations on the table
+        1. pick objects and place it in cupboard
+        :return:
         '''
+
+
         obj_poses = self.get_noisy_poses()
-        grasp_points = [] #[x, y, z, q1, q2, q3, q4]
+        grasp_points = []  # [x, y, z, q1, q2, q3, q4]
         # iterate through all the objects
         for k, v in obj_poses.items():
-            v[2] = v[2] + 0.035 # keep some distance b/w suction cup and object
+            v[2] = v[2] + 0.035  # keep some distance b/w suction cup and object
             if 'grasp' not in k:
                 pass
             else:
-                grasp_points.append((k,v))
+                grasp_points.append((k, v))
 
         # sort object positions based on distance from the base
         # grasp_points = sorted(grasp_points, key = lambda x: (x[0]**2 + x[1]**2))
-
 
         while grasp_points:
             try:
@@ -220,7 +192,8 @@ class Scene:
                 print("Move to grasp point for: ", obj_name[:-12])
                 self.update(gsp_pt, move_arm=True, ignore_collisions=True)
 
-                print("Attach object to gripper: " + obj_name[:-12], env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
+                print("Attach object to gripper: " + obj_name[:-12],
+                      self._env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
                 self.update(move_arm=False)
 
                 print("Just move up while holding: ", obj_name[:-12])
@@ -231,8 +204,9 @@ class Scene:
 
                     shape_obj = Shape(obj_name[:-12])
                     # ipdb.set_trace()
-                    status, place_pt, rotation = self._task._task.boundary.find_position_on_table(shape_obj, min_distance=0.2)
-                    r  = R.from_euler('xyz', rotation)
+                    status, place_pt, rotation = self._task._task.boundary.find_position_on_table(shape_obj,
+                                                                                                  min_distance=0.2)
+                    r = R.from_euler('xyz', rotation)
 
                     # ipdb.set_trace()
                     place_pt[2] = gsp_pt[2] + 0.02
@@ -267,49 +241,39 @@ class Scene:
                 env._robot.gripper.release()
         return
 
-    def pre_grasp(self, grasp_vect):
-        pre_grasp_point = grasp_vect
-        pre_grasp_point[2] += 0.3
-        return pre_grasp_point
-
-    def execute_path(self, path):
-        path_points = path._path_points.reshape(-1, path._num_joints)
-        path_joints = path_points
-
-        i = 0
-        while not path._path_done and i < path_joints.shape[0]:
-            self._task.step(path_joints[i])
-            i += 1
-
 if __name__ == "__main__":
 
     # Initializes environment and task
     mode = "abs_joint_pos"
     # mode = "ee_pose_plan"
-    if(mode == "ee_pose_plan"):
-        action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN) # See rlbench/action_modes.py for other action modes
-    elif(mode == "abs_joint_pos"):
+    if (mode == "ee_pose_plan"):
+        action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN)  # See rlbench/action_modes.py for other action modes
+    elif (mode == "abs_joint_pos"):
         action_mode = ActionMode(ArmActionMode.ABS_JOINT_POSITION)
     else:
         raise Exception('Mode not Found')
 
-
     env = Environment(action_mode, '', ObservationConfig(), False, static_positions=False)
-    task = env.get_task(PutGroceriesInCupboard) # available tasks: EmptyContainer, PlayJenga, PutGroceriesInCupboard, SetTheTable
+    task = env.get_task(PutGroceriesInCupboard)
     task.reset()
 
-    scene = Scene(env, task, mode)  # Initialize our scene class
-    scene.register_objs() # Register all objects in the environment
-
-    # TODO - RL Forward Policy
-    scene.set_positions() # Run an episode of forward policy or set object locations manually
-
-    scene.reset()
-
-    while True:
-
-        scene.update()
-
-        scene.reset()
+    '''
+    Step 1: Init 
+    Initialize scene, register objects, preset positions
+    '''
+    scene = Scene(env, task, mode)  # Initialize the scene
+    scene.register_objs()  # Register all objects in the environment
+    # scene.preset_positions()
+    '''
+    Step 2: Forward Policy 
+    Place selected items in cupboard
+    '''
+    # forward.reset_to_cupboard(scene)
+    '''
+    Step 3: Reset
+    1. Reset the environment by removing items from the cupboard
+    2. Rearrange the items on the table
+    '''
+    reset.reset_on_table(scene)
 
     env.shutdown()

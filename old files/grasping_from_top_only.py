@@ -12,8 +12,20 @@ import pyrep
 import math
 from rlbench.backend.spawn_boundary import SpawnBoundary
 from pyrep.objects.shape import Shape
-from util import get_approach_pose, get_approach_pose2
+from scipy.spatial.transform import Rotation as R
 
+
+GROCERY_NAMES = [
+    'crackers',
+    'chocolate jello',
+    'strawberry jello',
+    'soup',
+    'tuna',
+    'spam',
+    'coffee',
+    'mustard',
+    'sugar',
+]
 
 def skew(x):
     return np.array([[0, -x[2], x[1]],
@@ -41,7 +53,6 @@ class Scene:
         self._pos_scale = [0.005] * 3 # noise params
         self._rot_scale = [0.01] * 3
         self._mode = mode
-        self.boundary = SpawnBoundary([Shape('workspace')])
 
     def register_objs(self):
         '''
@@ -59,28 +70,28 @@ class Scene:
         for obj in objs:
             name = obj.get_name()
 
-            if(name == 'cupboard'):
-                cupboard_pose = obj.get_position()
-                cupboard_pose[2] += 0.75
-                obj.set_position(cupboard_pose)
-
             if((name == 'chocolate_jello')):
-                print(name, obj.get_pose())
-                obj.rotate([0, -1.57, 0])
-                # pose = obj.get_pose()
-                # bb = obj.get_bounding_box()
-                # pose[2] = pose[2] - bb[-1] + bb[1]
-                # obj.set_pose(pose)
-                print(name, obj.get_pose())
-                # print(obj.get_bounding_box())
+                    # or (name == 'crackers') or (name == 'crackers_visual')
+                    # or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
+                    # or (name == 'tuna') or (name == 'tuna_visual')
+                    # or (name == 'spam') or (name == 'spam_visual')
+                    # or (name == 'coffee') or (name == 'coffee_visual')
+                    # or (name == 'mustard') or (name == 'mustard_visual')
+                    # or (name == 'sugar') or (name == 'sugar_visual')):
+
+                # obj.set_position([0.4357, 0, 1.38])
+                obj.rotate([0, 1.57, 0])
 
             if((name == 'crackers')):
-                print(name, obj.get_pose())
                 obj.rotate([0, 1.57, 0])
-                print(name, obj.get_pose())
+            #
+            # if((name == 'soup_grasp_point')):
+            #     obj.set_position([0.3, 0, 0.825])
 
-            # if((name == 'soup')):
-            #     obj.rotate([0, 1.57, 0])
+            # if(name == 'cupboard'):
+            #     cupboard_pose = obj.get_position()
+            #     cupboard_pose[2] += 0.75
+            #     obj.set_position(cupboard_pose)
 
         self.update()
 
@@ -133,7 +144,7 @@ class Scene:
 
     def where_to_place(self, curr_obj_name):
         # TODO: where to place the objects while reset
-        curr_obj = self._scene_objs[curr_obj_name]
+        curr_obj = self._scene_objs[curr_obj_name[:-12]]
         obj_grasp_point = self._scene_objs[curr_obj_name]
 
         bb0 = curr_obj.get_bounding_box()
@@ -172,103 +183,88 @@ class Scene:
         return np.array([x,y,h] + obj_grasp_point.get_pose()[3:].tolist())
         # return np.array([x,y,h] + [0,0,0,1])
 
+
     def reset(self):
         '''
         TODO
          1. Check for every box in a sequence, from closer to farther
          2. Generate a series of waypoints to pick the object and place it in its set loc.
         '''
-        # obj_poses = self.get_noisy_poses()
+        obj_poses = self.get_noisy_poses()
+        grasp_points = [] #[x, y, z, q1, q2, q3, q4]
+        # iterate through all the objects
+        for k, v in obj_poses.items():
+            v[2] = v[2] + 0.035 # keep some distance b/w suction cup and object
+            if 'grasp' not in k:
+                pass
+            else:
+                grasp_points.append((k,v))
 
-        objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
+        # sort object positions based on distance from the base
+        # grasp_points = sorted(grasp_points, key = lambda x: (x[0]**2 + x[1]**2))
 
-        # grasp_points = [] #[x, y, z, q1, q2, q3, q4]
-        # for obj in objs[0:9]:
-        #     name = obj.get_name()
-        #     # print(name)
-        #     pose = obj.get_pose()
-        #     bb = obj.get_bounding_box()
-        #     if name == 'crackers':
-        #         grasp_points.append(get_approach_pose(name,pose,bb))
 
-        objs_by_name = {}
+        while grasp_points:
+            try:
 
-        for obj in objs:
-            obj_name = obj.get_name()
-            print(obj_name)
-            objs_by_name[obj_name] = obj
+                obj_name, gsp_pt = grasp_points.pop(0)
 
-        for obj in objs[0:9]: # With assumption that there is no collision in the process and none of the objects change pose unless we explicitly do that
+                # h = self._scene_objs[obj_name[:-12]].get_pose()[2] + 0.1
 
-            obj_name = obj.get_name()
-            # if obj_name != 'crackers': continue
-            # print(name)
-            pose = obj.get_pose()
-            # print(pose)
-            bb = obj.get_bounding_box()
-            print(bb)
+                print("Grasping: ", obj_name[:-12])
+                pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
 
-            initial_grasp_point = objs_by_name[obj_name + '_grasp_point']
-            
-            grasp_points = get_approach_pose2(obj_name,pose,bb, initial_grasp_point.get_pose())
+                print("Move to pre-grasp point for: ", obj_name[:-12])
+                self.update(pre_gsp_pt, move_arm=True)
 
-            i = 0
+                print("Move to grasp point for: ", obj_name[:-12])
+                self.update(gsp_pt, move_arm=True, ignore_collisions=True)
 
-            while grasp_points:
-                print(i)
-                i += 1
-                try:
-                    gsp_pt = grasp_points.pop(0)
-                    print(gsp_pt)
+                print("Attach object to gripper: " + obj_name[:-12], env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
+                self.update(move_arm=False)
 
-                    print("Grasping: ", obj_name)
-                    pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
-                    print(gsp_pt)
+                print("Just move up while holding: ", obj_name[:-12])
+                self.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
 
-                    print("Move to pre-grasp point for: ", obj_name)
-                    self.update(pre_gsp_pt, move_arm=True)
+                while True:
+                    print("Trying new positions to randomly place")
 
-                    print("Move to grasp point for: ", obj_name)
-                    self.update(gsp_pt, move_arm=True)
+                    shape_obj = Shape(obj_name[:-12])
+                    # ipdb.set_trace()
+                    status, place_pt, rotation = self._task._task.boundary.find_position_on_table(shape_obj, min_distance=0.2)
+                    r  = R.from_euler('xyz', rotation)
 
-                    print("Attach object to gripper: " + obj_name, env._robot.gripper.grasp(scene._scene_objs[obj_name]))
-                    self.update(move_arm=False)
+                    # ipdb.set_trace()
+                    place_pt[2] = gsp_pt[2] + 0.02
+                    place_pt = np.array(place_pt + (gsp_pt[3:]).tolist())
+                    # place_pt = np.array(place_pt + [r.as_quat()[3], r.as_quat()[2], 0, 0])
+                    # place_pt = np.array(place_pt + [ 0.707, 0.707, 0, 0])
+                    # if(obj_name[:-12] == 'chocolate_jello'):
+                    #     r = (R.from_euler('xyz', [1.57, 0, 1.57])).as_quat()
+                    #     place_pt = np.array([0.4757, 0.0439, 1.4, r[0], r[1], r[2], r[3]])
 
-                    print("Just move up while holding: ", obj_name)
-                    self.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
+                    pre_place_pt = self.pre_grasp(place_pt.copy())
+                    try:
+                        print("Going to pre_place_pt with gripper close")
+                        self.update(pre_place_pt, move_arm=True, ignore_collisions=False)
+                        print("Going to place_pt with gripper close")
+                        self.update(place_pt, move_arm=True)
+                        break
+                    except:
+                        print("Path not found")
+                        continue
 
-                    while True:
-                        print("Trying new positions to randomly place")
+                print("opening gripper")
+                print("DeGrasp: " + obj_name[:-12])
+                env._robot.gripper.release()
+                self.update()
 
-                        shape_obj = Shape(obj_name)
-                        status, place_pt, rotation = self.boundary.find_position_on_table(shape_obj, min_distance=0.1)
-                        place_pt[2] = gsp_pt[2] + 0.025
-                        place_pt = np.array(place_pt + [0.707,0.707,0,0])
+                print("Going in air")
+                self.update(pre_place_pt, move_arm=True)
 
-                        pre_place_pt = self.pre_grasp(place_pt.copy())
-                        try:
-                            print("Going to pre_place_pt with gripper close")
-                            self.update(pre_place_pt, move_arm=True)
-                            print("Going to place_pt with gripper close")
-                            self.update(place_pt, move_arm=True)
-                            break
-                        except:
-                            print("Path not found")
-                            continue
-
-                    print("opening gripper")
-                    print("DeGrasp: " + obj_name)
-                    env._robot.gripper.release()
-                    self.update()
-
-                    print("Going in air")
-                    self.update(pre_place_pt, move_arm=True)
-                    break
-
-                except pyrep.errors.ConfigurationPathError:
-                    print("Could Not find Path")
-                    env._robot.gripper.release()
-        
+            except pyrep.errors.ConfigurationPathError:
+                print("Could Not find Path")
+                env._robot.gripper.release()
         return
 
     def pre_grasp(self, grasp_vect):
@@ -282,13 +278,13 @@ class Scene:
 
         i = 0
         while not path._path_done and i < path_joints.shape[0]:
-            task.step(path_joints[i])
+            self._task.step(path_joints[i])
             i += 1
 
 if __name__ == "__main__":
 
     # Initializes environment and task
-    mode = "abs_joint_pos" # ee_pose_plan
+    mode = "abs_joint_pos"
     # mode = "ee_pose_plan"
     if(mode == "ee_pose_plan"):
         action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN) # See rlbench/action_modes.py for other action modes
@@ -305,8 +301,7 @@ if __name__ == "__main__":
     scene = Scene(env, task, mode)  # Initialize our scene class
     scene.register_objs() # Register all objects in the environment
 
-    # TODO - RL Forward Policy
-    scene.set_positions() # Run an episode of forward policy or set object locations manually
+    # scene.set_positions() # Run an episode of forward policy or set object locations manually
 
     scene.reset()
 
