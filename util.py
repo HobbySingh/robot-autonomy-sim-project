@@ -67,6 +67,7 @@ def get_approach_pose(obj_name, obj_pose, bounding_box):
 
 def get_approach_pose2(obj_name, obj_pose, bounding_box, initial_grasp_pose):
 
+    print(obj_name)
     grasps = []
 
     offset = 0.035
@@ -78,6 +79,8 @@ def get_approach_pose2(obj_name, obj_pose, bounding_box, initial_grasp_pose):
 
     pos_wrt_objframe = obj_pose[0:3]
 
+    print(initial_grasp_pose)
+
     initial_grasp_pose = initial_grasp_pose[-4:]
     initial_grasp_pose = R.from_quat(initial_grasp_pose)
     initial_grasp_pose = initial_grasp_pose.as_matrix()
@@ -88,11 +91,13 @@ def get_approach_pose2(obj_name, obj_pose, bounding_box, initial_grasp_pose):
 
     for i in range(3):
 
-        pos_wrt_objframe = obj_pose[0:3].copy() 
+        pos_wrt_objframe = np.array([0,0,0])
         pos_wrt_objframe[2-i] += bounding_box[-1-2*i] + offset
-        pos_wrt_global = np.matmul(rot_mat, pos_wrt_objframe)
+        pos_wrt_global = np.matmul(rot_mat, pos_wrt_objframe) + obj_pose[0:3]
 
         r_ = R.from_matrix(target_pose)
+
+        print(np.append(pos_wrt_global, r_.as_quat()))
 
         grasps.append(np.append(pos_wrt_global, r_.as_quat()))
 
@@ -111,9 +116,9 @@ def get_approach_pose2(obj_name, obj_pose, bounding_box, initial_grasp_pose):
     
     for i in range(3):
 
-        pos_wrt_objframe = obj_pose[0:3].copy() 
+        pos_wrt_objframe = np.array([0,0,0])
         pos_wrt_objframe[2-i] -= bounding_box[-1-2*i] + offset
-        pos_wrt_global = np.matmul(rot_mat, pos_wrt_objframe)
+        pos_wrt_global = np.matmul(rot_mat, pos_wrt_objframe) + obj_pose[0:3]
 
         r_ = R.from_matrix(target_pose)
 
