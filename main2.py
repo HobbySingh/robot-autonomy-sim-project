@@ -12,7 +12,7 @@ import pyrep
 import math
 from rlbench.backend.spawn_boundary import SpawnBoundary
 from pyrep.objects.shape import Shape
-from util import get_approach_pose
+from util import get_approach_pose, get_approach_pose2
 
 
 def skew(x):
@@ -59,28 +59,28 @@ class Scene:
         for obj in objs:
             name = obj.get_name()
 
-            # if((name == 'crackers') or (name == 'crackers_visual')
-            #         or (name == 'chocolate_jello') or (name == 'chocolate_jello_visual')
-            #         or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
-            #         or (name == 'tuna') or (name == 'tuna_visual')
-            #         or (name == 'spam') or (name == 'spam_visual')
-            #         or (name == 'coffee') or (name == 'coffee_visual')
-            #         or (name == 'mustard') or (name == 'mustard_visual')
-            #         or (name == 'sugar') or (name == 'sugar_visual')):
-            #
-            #     obj.set_position([x, 0.03, 0.1])
-            #     x += 0.01
-            #
-            # if((name == 'soup') or (name == 'soup_visual')):
-            #     obj.set_position([0.3, 0, 0.8])
-            #
-            # if((name == 'soup_grasp_point')):
-            #     obj.set_position([0.3, 0, 0.825])
-
             if(name == 'cupboard'):
                 cupboard_pose = obj.get_position()
                 cupboard_pose[2] += 0.75
                 obj.set_position(cupboard_pose)
+
+            if((name == 'chocolate_jello')):
+                print(name, obj.get_pose())
+                obj.rotate([0, -1.57, 0])
+                # pose = obj.get_pose()
+                # bb = obj.get_bounding_box()
+                # pose[2] = pose[2] - bb[-1] + bb[1]
+                # obj.set_pose(pose)
+                print(name, obj.get_pose())
+                # print(obj.get_bounding_box())
+
+            if((name == 'crackers')):
+                print(name, obj.get_pose())
+                obj.rotate([0, 1.57, 0])
+                print(name, obj.get_pose())
+
+            # if((name == 'soup')):
+            #     obj.rotate([0, 1.57, 0])
 
         self.update()
 
@@ -191,24 +191,39 @@ class Scene:
         #     if name == 'crackers':
         #         grasp_points.append(get_approach_pose(name,pose,bb))
 
+        objs_by_name = {}
+
+        for obj in objs:
+            obj_name = obj.get_name()
+            print(obj_name)
+            objs_by_name[obj_name] = obj
 
         for obj in objs[0:9]: # With assumption that there is no collision in the process and none of the objects change pose unless we explicitly do that
 
             obj_name = obj.get_name()
+            # if obj_name != 'crackers': continue
             # print(name)
             pose = obj.get_pose()
+            # print(pose)
             bb = obj.get_bounding_box()
-            grasp_points = get_approach_pose(obj_name,pose,bb)
+            print(bb)
+
+            initial_grasp_point = objs_by_name[obj_name + '_grasp_point']
+            
+            grasp_points = get_approach_pose2(obj_name,pose,bb, initial_grasp_point.get_pose())
+
+            i = 0
 
             while grasp_points:
+                print(i)
+                i += 1
                 try:
                     gsp_pt = grasp_points.pop(0)
                     print(gsp_pt)
 
-                    # h = self._scene_objs[obj_name[:-12]].get_pose()[2] + 0.1
-
                     print("Grasping: ", obj_name)
                     pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
+                    print(gsp_pt)
 
                     print("Move to pre-grasp point for: ", obj_name)
                     self.update(pre_gsp_pt, move_arm=True)
