@@ -16,7 +16,8 @@ from util import get_approach_pose, get_approach_pose
 
 def reset_on_table(scene):
 
-    objs = self._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
+    env = scene._env
+    objs = scene._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
 
     objs_by_name = {}
 
@@ -51,37 +52,37 @@ def reset_on_table(scene):
                 print(gsp_pt)
 
                 print("Grasping: ", obj_name)
-                # pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
+                # pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
                 # pre_gsp_pt = pre_grasp_points.pop(0)
-                pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
+                pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
                 print(pre_gsp_pt)
 
                 print("Move to pre-grasp point for: ", obj_name)
-                self.update(pre_gsp_pt, move_arm=True)
+                scene.update(pre_gsp_pt, move_arm=True)
 
                 print("Move to grasp point for: ", obj_name)
-                self.update(gsp_pt, move_arm=True)
+                scene.update(gsp_pt, move_arm=True)
 
                 print("Attach object to gripper: " + obj_name, env._robot.gripper.grasp(scene._scene_objs[obj_name]))
-                self.update(move_arm=False)
+                scene.update(move_arm=False)
 
                 print("Just move up while holding: ", obj_name)
-                self.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
+                scene.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
 
                 while True:
                     print("Trying new positions to randomly place")
 
                     shape_obj = Shape(obj_name)
-                    status, place_pt, rotation = self.boundary.find_position_on_table(shape_obj, min_distance=0.1)
+                    status, place_pt, rotation = scene.boundary.find_position_on_table(shape_obj, min_distance=0.1)
                     place_pt[2] = gsp_pt[2] + 0.025
                     place_pt = np.array(place_pt + [0.707,0.707,0,0])
 
-                    pre_place_pt = self.pre_grasp(place_pt.copy())
+                    pre_place_pt = scene.pre_grasp(place_pt.copy())
                     try:
                         print("Going to pre_place_pt with gripper close")
-                        self.update(pre_place_pt, move_arm=True)
+                        scene.update(pre_place_pt, move_arm=True)
                         print("Going to place_pt with gripper close")
-                        self.update(place_pt, move_arm=True)
+                        scene.update(place_pt, move_arm=True)
                         break
                     except:
                         print("Path not found")
@@ -90,10 +91,10 @@ def reset_on_table(scene):
                 print("opening gripper")
                 print("DeGrasp: " + obj_name)
                 env._robot.gripper.release()
-                self.update()
+                scene.update()
 
                 print("Going in air")
-                self.update(pre_place_pt, move_arm=True)
+                scene.update(pre_place_pt, move_arm=True)
                 break
 
             except pyrep.errors.ConfigurationPathError:
