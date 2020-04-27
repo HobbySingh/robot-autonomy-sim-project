@@ -73,7 +73,7 @@ def reset_on_table(scene):
                     print("Trying new positions to randomly place")
 
                     shape_obj = Shape(obj_name)
-                    status, place_pt, rotation = scene.boundary.find_position_on_table(shape_obj, min_distance=0.1)
+                    status, place_pt, rotation = scene._task._task.boundary.find_position_on_table(shape_obj, min_distance=0.1)
                     place_pt[2] = gsp_pt[2] + 0.025
                     place_pt = np.array(place_pt + [0.707,0.707,0,0])
 
