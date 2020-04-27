@@ -70,7 +70,7 @@ class Scene:
         for obj in objs:
             name = obj.get_name()
 
-            if((name == 'chocolate_jello') ):
+            if((name == 'chocolate_jello')):
                     # or (name == 'crackers') or (name == 'crackers_visual')
                     # or (name == 'strawberry_jello') or (name == 'strawberry_jello_visual')
                     # or (name == 'tuna') or (name == 'tuna_visual')
