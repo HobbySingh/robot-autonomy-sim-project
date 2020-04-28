@@ -60,6 +60,7 @@ class BoundaryObject(object):
              maxy, minz, maxz) = boundary.get_model_bounding_box()
         else:
             minx, maxx, miny, maxy, minz, maxz = boundary.get_bounding_box()
+        minx = minx + 0.1
         self._boundary_bbox = BoundingBox(minx, maxx, miny, maxy, minz, maxz)
 
         height = np.abs(maxz - minz)

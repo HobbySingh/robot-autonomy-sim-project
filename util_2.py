@@ -18,8 +18,6 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
 
     pos_wrt_objframe = obj_pose[0:3]
 
-    # print(initial_grasp_pose)
-
     initial_grasp_pose = pose.copy()
 
     initial_grasp_pose = initial_grasp_pose[-4:]
@@ -103,7 +101,6 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
         target_transform = R.from_euler('xyz', target_transform, degrees=True)
         target_pose = np.matmul(target_pose, target_transform.as_matrix())
 
-    # ipdb.set_trace()
     if not incupboard:
         for s in grasps:
             pos_wrt_global2 = obj_pose[0:3].copy()

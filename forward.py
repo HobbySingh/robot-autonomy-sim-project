@@ -1,6 +1,6 @@
 import numpy as np
 import pyrep
-import util
+import util_2
 import ipdb
 
 def create_place_points(obj_poses):
@@ -54,8 +54,12 @@ def reset_to_cupboard(scene):
             pose = scene._scene_objs[obj_name[:-12]].get_pose()
             bb = scene._scene_objs[obj_name[:-12]].get_bounding_box()
 
-            grasp_points, pre_grasp_points = util.get_approach_pose(obj_name[:-12], pose, bb, initial_grasp_pt.copy(),
-                                                               incupboard=True)
+            if(pose[2] > 1.2):
+                incupboard = True
+            else:
+                incupboard = False
+            grasp_points, pre_grasp_points = util_2.get_approach_pose(obj_name[:-12], pose, bb, initial_grasp_pt.copy(),
+                                                               incupboard=incupboard)
 
             i=0
             while(grasp_points):
@@ -65,7 +69,8 @@ def reset_to_cupboard(scene):
 
                     gsp_pt = grasp_points.pop(0)
                     print("Grasping: ", obj_name[:-12])
-                    pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
+                    # pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
+                    pre_gsp_pt = pre_grasp_points.pop(0)
 
                     print("Move to pre-grasp point for: ", obj_name[:-12])
                     scene.update(pre_gsp_pt, move_arm=True)

@@ -12,7 +12,7 @@ import pyrep
 import math
 from rlbench.backend.spawn_boundary import SpawnBoundary
 from pyrep.objects.shape import Shape
-from util import get_approach_pose, get_approach_pose
+from util_2 import get_approach_pose, get_approach_pose
 
 def reset_on_table(scene):
 
@@ -22,7 +22,6 @@ def reset_on_table(scene):
     env = scene._env
     objs = scene._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
 
-    ipdb.set_trace()
     for obj in objs[0:9]:
 
         obj_name = obj.get_name()
@@ -34,7 +33,12 @@ def reset_on_table(scene):
         h = abs(bb[-2] - bb[-1])
 
         initial_grasp_point = scene._scene_objs[obj_name + '_grasp_point'].get_pose()
-        grasp_points, pre_grasp_points = get_approach_pose(obj_name,pose,bb, initial_grasp_point.copy(), incupboard = True)
+
+        if(pose[2] > 1.2):
+            incupboard = True
+        else:
+            incupboard = False
+        grasp_points, pre_grasp_points = get_approach_pose(obj_name,pose,bb, initial_grasp_point.copy(), incupboard = incupboard)
 
         # grasp_points[0] = initial_grasp_point
         # grasp_points[0][2] += 0.035
@@ -52,7 +56,7 @@ def reset_on_table(scene):
                 scene.update(pre_gsp_pt, move_arm=True)
 
                 print("Move to grasp point for: ", obj_name)
-                scene.update(gsp_pt, move_arm=True, ignore_collisions=True)
+                scene.update(gsp_pt, move_arm=True, ignore_collisions=False)
 
                 print("Attach object to gripper: " + obj_name, env._robot.gripper.grasp(scene._scene_objs[obj_name]))
                 scene.update(move_arm=False)
