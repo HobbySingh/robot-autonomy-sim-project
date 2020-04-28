@@ -3,7 +3,7 @@ import numpy as np
 import ipdb
 
 
-def get_approach_pose2(obj_name, obj_pose, bounding_box, pose, incupboard = False):
+def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False):
 
     print(obj_name)
     grasps = []
