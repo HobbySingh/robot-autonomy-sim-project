@@ -13,6 +13,16 @@ import math
 from rlbench.backend.spawn_boundary import SpawnBoundary
 from pyrep.objects.shape import Shape
 from util_2 import get_approach_pose, get_approach_pose
+import time
+
+
+def place_upright(bbox, gsp_pt, Flag = False):
+    if Flag:
+        place_pt_upright = np.array(gsp_pt)
+        place_pt_upright[3:] = np.array([0.707**2,-0.707**2,0.707**2,-0.707**2])
+        place_pt_upright[2] = 0.85 + bbox[-1]
+    return place_pt_upright
+
 
 def reset_on_table(scene):
 
@@ -27,7 +37,7 @@ def reset_on_table(scene):
         obj_name = obj.get_name()
         print("Resetting object: ", obj_name)
 
-        if obj_name != 'chocolate_jello': break
+        # if obj_name != 'chocolate_jello': break
         pose = obj.get_pose()
         bb = obj.get_bounding_box()
         h = abs(bb[-2] - bb[-1])
@@ -64,6 +74,7 @@ def reset_on_table(scene):
                 print("Just move up while holding: ", obj_name)
                 scene.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
 
+
                 while True:
                     print("Trying new positions to randomly place")
 
@@ -72,7 +83,8 @@ def reset_on_table(scene):
                     print("Random Point: ", place_pt)
                     place_pt[2] = 0.75 + h + 0.025
                     place_pt = np.array(place_pt + [0.707,0.707,0,0])
-
+                    if obj_name == 'crackers' or obj_name == 'chocolate_jello':
+                        place_pt = place_upright(bb, gsp_pt, Flag = True)
                     print("Place point: ", place_pt)
                     pre_place_pt = scene.pre_grasp(place_pt.copy())
 
@@ -99,5 +111,5 @@ def reset_on_table(scene):
             except pyrep.errors.ConfigurationPathError:
                 print("Could Not find Path for grasp pose number :", i)
                 env._robot.gripper.release()
-    
+
     return

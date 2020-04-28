@@ -172,14 +172,14 @@ if __name__ == "__main__":
     task.reset()
 
     '''
-    Step 1: Init 
+    Step 1: Init
     Initialize scene, register objects, preset positions
     '''
     scene = Scene(env, task, mode)  # Initialize the scene
     scene.register_objs()  # Register all objects in the environment
     scene.preset_positions()
     '''
-    Step 2: Forward Policy 
+    Step 2: Forward Policy
     Place selected items in cupboard
     '''
     # forward.reset_to_cupboard(scene)
