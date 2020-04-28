@@ -18,14 +18,20 @@ from util_2 import get_approach_pose, get_approach_pose
 import time
 from scipy.spatial.transform import Rotation as R
 
-#
+
+def place_upright(bbox, gsp_pt, Flag = False):
+    if Flag:
+        place_pt_upright = np.array(gsp_pt)
+        place_pt_upright[3:] = np.array([0, 0.707, 0, 0.707])
+        place_pt_upright[2] = 0.8 + bbox[-1]
+    return place_pt_upright
+
 # def place_upright(bbox, gsp_pt, Flag = False):
 #     if Flag:
 #         place_pt_upright = np.array(gsp_pt)
 #         place_pt_upright[3:] = np.array([0.707**2,-0.707**2,0.707**2,-0.707**2])
 #         place_pt_upright[2] = 0.85 + bbox[-1]
 #     return place_pt_upright
-
 
 def reset_on_table(scene):
 
@@ -42,7 +48,7 @@ def reset_on_table(scene):
         obj_name = obj.get_name()
         print("Resetting object: ", obj_name)
 
-        if obj_name != 'crackers': continue
+        if obj_name != 'crackers' and obj_name != 'chocolate_jello': continue
         pose = obj.get_pose()
         pose = noisy_poses[obj_name]
         bb = obj.get_bounding_box()
@@ -106,8 +112,8 @@ def reset_on_table(scene):
                     else:
                         place_pt = np.array(place_pt + [0.707, 0.707, 0, 0])
 
-                    # if obj_name == 'crackers' or obj_name == 'chocolate_jello':
-                    #     place_pt = place_upright(bb, gsp_pt, Flag = True)
+                    if obj_name == 'crackers' or obj_name == 'chocolate_jello':
+                        place_pt = place_upright(bb, gsp_pt, Flag = True)
 
                     print("Place point: ", place_pt)
                     pre_place_pt = scene.pre_grasp(place_pt.copy())
@@ -136,5 +142,6 @@ def reset_on_table(scene):
             except pyrep.errors.ConfigurationPathError:
                 print("Could Not find Path for grasp pose number :", i)
                 env._robot.gripper.release()
+
 
     return

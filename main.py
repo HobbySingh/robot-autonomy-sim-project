@@ -81,8 +81,8 @@ class Scene:
             #     # obj.set_position([0.4357, 0, 1.38])
             #     obj.rotate([1.57, 1.57, 0])
 
-            # if ((name == 'chocolate_jello')):
-            #     obj.rotate([1.57, 1.57, 0])
+            if ((name == 'chocolate_jello')):
+                obj.rotate([0, 1.57, 0])
 
             if ((name == 'crackers')):
                 obj.rotate([0, 1.57, 0])

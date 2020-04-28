@@ -70,7 +70,7 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
     target_pose = np.matmul(target_pose, Rx.as_matrix())
 
     blank_transform = [0,0,0]
-    
+
     for i in range(3):
 
         pos_wrt_objframe = np.array([0,0,0])
@@ -108,5 +108,5 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
             Rx = R.from_euler('xyz', [-180,0,90], degrees=True)
 
             pre_grasps.append(np.append(pos_wrt_global2, Rx.as_quat()))
-    
+
     return grasps, pre_grasps
