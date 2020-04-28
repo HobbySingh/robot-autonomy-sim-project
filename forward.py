@@ -1,5 +1,7 @@
 import numpy as np
 import pyrep
+import util
+import ipdb
 
 def create_place_points(obj_poses):
 
@@ -31,12 +33,12 @@ def reset_to_cupboard(scene):
     obj_poses = scene.get_noisy_poses()
     waypoint3 = obj_poses['waypoint3']
     waypoint4 = obj_poses['waypoint4']
-    grasp_points = []  # [x, y, z, q1, q2, q3, q4]
+    gt_grasp_points = []  # [x, y, z, q1, q2, q3, q4]
     for k, v in obj_poses.items():
         v[2] = v[2] + 0.035  # keep some distance b/w suction cup and object
         if 'grasp' in k:
             if 'jello' in k or 'sugar' in k:
-                grasp_points.append((k, v))
+                gt_grasp_points.append((k, v))
             else:
                 pass
         else:
@@ -46,29 +48,51 @@ def reset_to_cupboard(scene):
     for idx, element in enumerate(place_pts):
         try:
 
-            obj_name, gsp_pt = grasp_points.pop(0)
+            obj_name, initial_grasp_pt = gt_grasp_points.pop(0)
+            print("Placing in cupboard: ", obj_name[:-12])
 
-            print("Grasping: ", obj_name[:-12])
-            pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
+            pose = scene._scene_objs[obj_name[:-12]].get_pose()
+            bb = scene._scene_objs[obj_name[:-12]].get_bounding_box()
 
-            print("Move to pre-grasp point for: ", obj_name[:-12])
-            scene.update(pre_gsp_pt, move_arm=True)
+            grasp_points, pre_grasp_points = util.get_approach_pose(obj_name[:-12], pose, bb, initial_grasp_pt.copy(),
+                                                               incupboard=True)
 
-            print("Move to grasp point for: ", obj_name[:-12])
-            scene.update(gsp_pt, move_arm=True, ignore_collisions=True)
+            i=0
+            while(grasp_points):
+                i+=1
+                try:
+                    print("Trying Grasp Pose: ", i)
 
-            print("Attach object to gripper: " + obj_name[:-12],
-                  scene._env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
-            scene.update(move_arm=False)
+                    gsp_pt = grasp_points.pop(0)
+                    print("Grasping: ", obj_name[:-12])
+                    pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
 
-            print("Just move up while holding: ", obj_name[:-12])
-            scene.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
+                    print("Move to pre-grasp point for: ", obj_name[:-12])
+                    scene.update(pre_gsp_pt, move_arm=True)
 
-            path_sequence = create_waypoint_sequence(element.copy(), scene)
-            for waypoint in path_sequence:
-                scene.update(waypoint, move_arm=True, ignore_collisions=False)
-            scene._env._robot.gripper.release()
-            scene.update(move_arm=False)
+                    print("Move to grasp point for: ", obj_name[:-12])
+                    scene.update(gsp_pt, move_arm=True, ignore_collisions=True)
+
+                    print("Attach object to gripper: " + obj_name[:-12],
+                          scene._env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
+                    scene.update(move_arm=False)
+
+                    print("Just move to pre-grasp point while holding: ", obj_name[:-12])
+                    scene.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
+
+                    print("Place the object inside cupboard")
+                    path_sequence = create_waypoint_sequence(element.copy(), scene)
+                    for waypoint in path_sequence:
+                        scene.update(waypoint, move_arm=True, ignore_collisions=False)
+
+                    print("Release :", obj_name[:-12])
+                    scene._env._robot.gripper.release()
+                    scene.update(move_arm=False)
+                    grasp_points = None
+
+                except pyrep.errors.ConfigurationPathError:
+                    print("Could Not find Path for grasp pose number :", i)
+                    scene._env._robot.gripper.release()
 
 
         except pyrep.errors.ConfigurationPathError:

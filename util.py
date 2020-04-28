@@ -4,11 +4,10 @@ import ipdb
 
 def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False):
 
-    print(obj_name)
     grasps = []
     pre_grasps = []
 
-    offset = 0.035
+    offset = 0.02
 
     quart_obj = obj_pose[-4:]
     r = R.from_quat(quart_obj)
@@ -41,6 +40,7 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
 
             pre_grasps.append(np.append(pos_wrt_global2, r_.as_quat()))
 
+        # ipdb.set_trace()
         target_transform = blank_transform.copy()
         target_transform[i] = -90
         # print(target_transform)
