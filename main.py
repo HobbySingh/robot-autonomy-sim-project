@@ -81,11 +81,11 @@ class Scene:
             #     # obj.set_position([0.4357, 0, 1.38])
             #     obj.rotate([1.57, 1.57, 0])
 
-            if ((name == 'chocolate_jello')):
-                obj.rotate([1.57, 1.57, 0])
+            # if ((name == 'chocolate_jello')):
+            #     obj.rotate([1.57, 1.57, 0])
 
             if ((name == 'crackers')):
-                obj.rotate([1.57, 1.57, 0])
+                obj.rotate([0, 1.57, 0])
 
             # if(name == 'cupboard'):
             #     cupboard_pose = obj.get_position()
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     '''
     scene = Scene(env, task, mode)  # Initialize the scene
     scene.register_objs()  # Register all objects in the environment
-    # scene.preset_positions()
+    scene.preset_positions()
     '''
     Step 2: Forward Policy
     Place selected items in cupboard

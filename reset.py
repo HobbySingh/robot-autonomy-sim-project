@@ -42,7 +42,7 @@ def reset_on_table(scene):
         obj_name = obj.get_name()
         print("Resetting object: ", obj_name)
 
-        # if obj_name != 'sugar': continue
+        if obj_name != 'crackers': continue
         pose = obj.get_pose()
         pose = noisy_poses[obj_name]
         bb = obj.get_bounding_box()
@@ -69,6 +69,8 @@ def reset_on_table(scene):
                 # pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
                 pre_gsp_pt = pre_grasp_points.pop(0)
 
+                if i <6:
+                    continue
                 print("Move to pre-grasp point for: ", obj_name)
                 scene.update(pre_gsp_pt, move_arm=True)
 
