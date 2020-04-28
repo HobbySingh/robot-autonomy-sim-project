@@ -158,8 +158,8 @@ class Scene:
 if __name__ == "__main__":
 
     # Initializes environment and task
-    mode = "abs_joint_pos"
-    # mode = "ee_pose_plan"
+    # mode = "abs_joint_pos"
+    mode = "ee_pose_plan"
     if (mode == "ee_pose_plan"):
         action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN)  # See rlbench/action_modes.py for other action modes
     elif (mode == "abs_joint_pos"):
@@ -177,12 +177,12 @@ if __name__ == "__main__":
     '''
     scene = Scene(env, task, mode)  # Initialize the scene
     scene.register_objs()  # Register all objects in the environment
-    scene.preset_positions()
+    # scene.preset_positions()
     '''
     Step 2: Forward Policy
     Place selected items in cupboard
     '''
-    # forward.reset_to_cupboard(scene)
+    forward.reset_to_cupboard(scene)
     '''
     Step 3: Reset
     1. Reset the environment by removing items from the cupboard

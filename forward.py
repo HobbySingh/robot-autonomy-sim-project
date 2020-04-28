@@ -21,8 +21,10 @@ def get_mirror_poses(base_pose, delta=0.1):
 def create_waypoint_sequence(place_point, scene):
     obj_poses = scene.get_noisy_poses()
     waypoint3 = obj_poses['waypoint3']
+    waypoint3[0] = waypoint3[0] - 0.05
     waypoint4 = obj_poses['waypoint4']
-    place_point[0] = waypoint4[0] - 0.05
+    waypoint4[0] = waypoint4[0] - 0.05
+    place_point[0] = waypoint4[0]
     place_point[2:] = waypoint4[2:]
 
     return [waypoint3, waypoint4, place_point]
@@ -104,6 +106,6 @@ def reset_to_cupboard(scene):
             print("Could Not find Path")
             scene._robot.gripper.release()
 
-    scene.update(waypoint4, move_arm=True, ignore_collisions=True)
+    # scene.update(waypoint4, move_arm=True, ignore_collisions=True)
     scene.update(waypoint3, move_arm=True, ignore_collisions=True)
     return grasp_points

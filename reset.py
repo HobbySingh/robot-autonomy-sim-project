@@ -82,9 +82,11 @@ def reset_on_table(scene):
                     status, place_pt, rotation = scene._task._task.boundary.find_position_on_table(shape_obj, min_distance=0.1)
                     print("Random Point: ", place_pt)
                     place_pt[2] = 0.75 + h + 0.025
-                    place_pt = np.array(place_pt + [0.707,0.707,0,0])
+                    place_pt = np.array(place_pt + [-7.07106829e-01, -7.07106829e-01, -9.53326708e-06, -9.74050818e-06])
+
                     if obj_name == 'crackers' or obj_name == 'chocolate_jello':
                         place_pt = place_upright(bb, gsp_pt, Flag = True)
+
                     print("Place point: ", place_pt)
                     pre_place_pt = scene.pre_grasp(place_pt.copy())
 
