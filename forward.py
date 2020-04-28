@@ -22,8 +22,11 @@ def create_waypoint_sequence(place_point, scene):
     obj_poses = scene.get_noisy_poses()
     waypoint3 = obj_poses['waypoint3']
     waypoint3[0] = waypoint3[0] - 0.05
+    waypoint3[2] = waypoint3[2] - 0.01
     waypoint4 = obj_poses['waypoint4']
     waypoint4[0] = waypoint4[0] - 0.05
+    waypoint4[2] = waypoint4[2] - 0.01
+
     place_point[0] = waypoint4[0]
     place_point[2:] = waypoint4[2:]
 

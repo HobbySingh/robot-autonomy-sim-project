@@ -77,15 +77,17 @@ class Scene:
         for obj in objs:
             name = obj.get_name()
 
-            # if ((name == 'chocolate_jello')):
-            #     # obj.set_position([0.4357, 0, 1.38])
-            #     obj.rotate([1.57, 1.57, 0])
-
             if ((name == 'chocolate_jello')):
-                obj.rotate([0, 1.57, 0])
+                obj.rotate([1.57, 1.57, 0])
 
             if ((name == 'crackers')):
                 obj.rotate([0, 1.57, 0])
+
+            if((name == 'strawberry_jello')):
+                obj.rotate([1.57, 1.57, 0])
+
+            # if ((name == 'mustard')):
+            #     obj.rotate([1.57, -1.57, 0])
 
             # if(name == 'cupboard'):
             #     cupboard_pose = obj.get_position()
@@ -109,7 +111,7 @@ class Scene:
         if (move_arm):
             if (self._mode == "abs_joint_pos"):
                 path = env._robot.arm.get_path(position=joint_positions[0:3], quaternion=joint_positions[3:],
-                                               max_configs=500, trials=1000, algorithm=Algos.BiTRRT,
+                                               max_configs=50, trials=100, algorithm=Algos.BiTRRT,
                                                ignore_collisions=ignore_collisions)
                 self.execute_path(path)
             else:
@@ -133,12 +135,12 @@ class Scene:
             name = obj.get_name()
             pose = obj.get_pose()
 
-            pos, quat_wxyz = sample_normal_pose(self._pos_scale, self._rot_scale)
-            gt_quat_wxyz = quaternion(pose[6], pose[3], pose[4], pose[5])
-            perturbed_quat_wxyz = quat_wxyz * gt_quat_wxyz
-
-            pose[:3] += pos
-            pose[3:] = [perturbed_quat_wxyz.x, perturbed_quat_wxyz.y, perturbed_quat_wxyz.z, perturbed_quat_wxyz.w]
+            # pos, quat_wxyz = sample_normal_pose(self._pos_scale, self._rot_scale)
+            # gt_quat_wxyz = quaternion(pose[6], pose[3], pose[4], pose[5])
+            # perturbed_quat_wxyz = quat_wxyz * gt_quat_wxyz
+            #
+            # pose[:3] += pos
+            # pose[3:] = [perturbed_quat_wxyz.x, perturbed_quat_wxyz.y, perturbed_quat_wxyz.z, perturbed_quat_wxyz.w]
 
             obj_poses[name] = pose
 
@@ -185,7 +187,9 @@ if __name__ == "__main__":
     Step 2: Forward Policy
     Place selected items in cupboard
     '''
-    # forward.reset_to_cupboard(scene)
+    forward.reset_to_cupboard(scene)
+
+
     '''
     Step 3: Reset
     1. Reset the environment by removing items from the cupboard
