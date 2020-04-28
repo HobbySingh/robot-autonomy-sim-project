@@ -21,14 +21,7 @@ def reset_on_table(scene):
     env = scene._env
     objs = scene._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
 
-    objs_by_name = {}
-
-    for obj in objs:
-        obj_name = obj.get_name()
-        # print(obj_name)
-        objs_by_name[obj_name] = obj
-
-    for obj in objs[0:9]: # With assumption that there is no collision in the process and none of the objects change pose unless we explicitly do that
+    for obj in objs[0:9]:
 
         obj_name = obj.get_name()
 
@@ -36,20 +29,13 @@ def reset_on_table(scene):
         pose = obj.get_pose()
         bb = obj.get_bounding_box()
 
-        initial_grasp_point = objs_by_name[obj_name + '_grasp_point'].get_pose()
-        # print('here')
-        # print(initial_grasp_point)
+        initial_grasp_point = scene._scene_objs[obj_name + '_grasp_point'].get_pose()
         grasp_points, pre_grasp_points = get_approach_pose(obj_name,pose,bb, initial_grasp_point.copy(), incupboard = True)
-        print('here')
-        print(grasp_points)
-        print(pre_grasp_points)
-        # print(grasp_points[0])
-        # print(initial_grasp_point)
+
         grasp_points[0] = initial_grasp_point
         grasp_points[0][2] += 0.035
 
         i = 0
-
         while grasp_points:
             print(i)
             i += 1

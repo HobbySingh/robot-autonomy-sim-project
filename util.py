@@ -13,11 +13,6 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
     quart_obj = obj_pose[-4:]
     r = R.from_quat(quart_obj)
     rot_mat = r.as_matrix()
-    r = r.as_euler('xyz', degrees=True)
-
-    pos_wrt_objframe = obj_pose[0:3]
-
-    # print(initial_grasp_pose)
 
     initial_grasp_pose = pose.copy()
 
@@ -31,19 +26,13 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
 
     for i in range(3):
 
-        ipdb.set_trace()
-
         pos_wrt_objframe = np.array([0,0,0]).astype('float')
         pos_wrt_objframe[2-i] += (bounding_box[-1-2*i] + offset)
         pos_wrt_global = np.matmul(rot_mat, pos_wrt_objframe) + obj_pose[0:3]
 
         r_ = R.from_matrix(target_pose)
 
-        # print(np.append(pos_wrt_global, r_.as_quat()))
-
         grasps.append(np.append(pos_wrt_global, r_.as_quat()))
-
-        # ipdb.set_trace()
 
         if incupboard:
             pos_wrt_objframe2 = pos_wrt_objframe.copy()
@@ -51,8 +40,6 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
             pos_wrt_global2 = np.matmul(rot_mat, pos_wrt_objframe2) + obj_pose[0:3]
 
             pre_grasps.append(np.append(pos_wrt_global2, r_.as_quat()))
-
-            # ipdb.set_trace()
 
         target_transform = blank_transform.copy()
         target_transform[i] = -90

@@ -155,92 +155,6 @@ class Scene:
             self._task.step(path_joints[i])
             i += 1
 
-    def reset(self):
-        '''
-        Pick the objects from table/ cupboard and place them on random locations on the table
-        1. pick objects and place it in cupboard
-        :return:
-        '''
-
-
-        obj_poses = self.get_noisy_poses()
-        grasp_points = []  # [x, y, z, q1, q2, q3, q4]
-        # iterate through all the objects
-        for k, v in obj_poses.items():
-            v[2] = v[2] + 0.035  # keep some distance b/w suction cup and object
-            if 'grasp' not in k:
-                pass
-            else:
-                grasp_points.append((k, v))
-
-        # sort object positions based on distance from the base
-        # grasp_points = sorted(grasp_points, key = lambda x: (x[0]**2 + x[1]**2))
-
-        while grasp_points:
-            try:
-
-                obj_name, gsp_pt = grasp_points.pop(0)
-
-                # h = self._scene_objs[obj_name[:-12]].get_pose()[2] + 0.1
-
-                print("Grasping: ", obj_name[:-12])
-                pre_gsp_pt = self.pre_grasp(gsp_pt.copy())
-
-                print("Move to pre-grasp point for: ", obj_name[:-12])
-                self.update(pre_gsp_pt, move_arm=True)
-
-                print("Move to grasp point for: ", obj_name[:-12])
-                self.update(gsp_pt, move_arm=True, ignore_collisions=True)
-
-                print("Attach object to gripper: " + obj_name[:-12],
-                      self._env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))
-                self.update(move_arm=False)
-
-                print("Just move up while holding: ", obj_name[:-12])
-                self.update(pre_gsp_pt, move_arm=True, ignore_collisions=True)
-
-                while True:
-                    print("Trying new positions to randomly place")
-
-                    shape_obj = Shape(obj_name[:-12])
-                    # ipdb.set_trace()
-                    status, place_pt, rotation = self._task._task.boundary.find_position_on_table(shape_obj,
-                                                                                                  min_distance=0.2)
-                    r = R.from_euler('xyz', rotation)
-
-                    # ipdb.set_trace()
-                    place_pt[2] = gsp_pt[2] + 0.02
-                    place_pt = np.array(place_pt + (gsp_pt[3:]).tolist())
-                    # place_pt = np.array(place_pt + [r.as_quat()[3], r.as_quat()[2], 0, 0])
-                    # place_pt = np.array(place_pt + [ 0.707, 0.707, 0, 0])
-                    # if(obj_name[:-12] == 'chocolate_jello'):
-                    #     r = (R.from_euler('xyz', [1.57, 0, 1.57])).as_quat()
-                    #     place_pt = np.array([0.4757, 0.0439, 1.4, r[0], r[1], r[2], r[3]])
-
-                    pre_place_pt = self.pre_grasp(place_pt.copy())
-                    try:
-                        print("Going to pre_place_pt with gripper close")
-                        self.update(pre_place_pt, move_arm=True, ignore_collisions=False)
-                        print("Going to place_pt with gripper close")
-                        self.update(place_pt, move_arm=True)
-                        break
-                    except:
-                        print("Path not found")
-                        continue
-
-                print("opening gripper")
-                print("DeGrasp: " + obj_name[:-12])
-                env._robot.gripper.release()
-                self.update()
-
-                print("Going in air")
-                self.update(pre_place_pt, move_arm=True)
-
-            except pyrep.errors.ConfigurationPathError:
-                print("Could Not find Path")
-                env._robot.gripper.release()
-        return
-
 if __name__ == "__main__":
 
     # Initializes environment and task
@@ -268,7 +182,7 @@ if __name__ == "__main__":
     Step 2: Forward Policy 
     Place selected items in cupboard
     '''
-    # forward.reset_to_cupboard(scene)
+    forward.reset_to_cupboard(scene)
     '''
     Step 3: Reset
     1. Reset the environment by removing items from the cupboard
