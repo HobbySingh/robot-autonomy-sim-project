@@ -31,6 +31,7 @@ def reset_on_table(scene):
     print("Resetting the scene")
     env = scene._env
     objs = scene._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
+    # objs = scene.get_noisy_poses()
 
     for obj in objs[0:9]:
 
@@ -84,8 +85,8 @@ def reset_on_table(scene):
                     place_pt[2] = 0.75 + h + 0.025
                     place_pt = np.array(place_pt + [-7.07106829e-01, -7.07106829e-01, -9.53326708e-06, -9.74050818e-06])
 
-                    if obj_name == 'crackers' or obj_name == 'chocolate_jello':
-                        place_pt = place_upright(bb, gsp_pt, Flag = True)
+                    # if obj_name == 'crackers' or obj_name == 'chocolate_jello':
+                    #     place_pt = place_upright(bb, gsp_pt, Flag = True)
 
                     print("Place point: ", place_pt)
                     pre_place_pt = scene.pre_grasp(place_pt.copy())

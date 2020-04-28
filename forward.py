@@ -15,7 +15,7 @@ def get_mirror_poses(base_pose, delta=0.1):
     right = np.array(base_pose)
     left[1] -= delta
     right[1] += delta
-    return [base_pose]
+    return [left, right, base_pose]
 
 
 def create_waypoint_sequence(place_point, scene):
@@ -39,7 +39,7 @@ def reset_to_cupboard(scene):
     for k, v in obj_poses.items():
         v[2] = v[2] + 0.035  # keep some distance b/w suction cup and object
         if 'grasp' in k:
-            if 'jello' in k or 'sugar' in k:
+            if 'jello' in k or 'mustard' in k:
                 gt_grasp_points.append((k, v))
             else:
                 pass
@@ -78,7 +78,7 @@ def reset_to_cupboard(scene):
                     scene.update(pre_gsp_pt, move_arm=True)
 
                     print("Move to grasp point for: ", obj_name[:-12])
-                    scene.update(gsp_pt, move_arm=True, ignore_collisions=True)
+                    scene.update(gsp_pt, move_arm=True, ignore_collisions=False)
 
                     print("Attach object to gripper: " + obj_name[:-12],
                           scene._env._robot.gripper.grasp(scene._scene_objs[obj_name[:-12]]))

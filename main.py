@@ -79,10 +79,10 @@ class Scene:
 
             if ((name == 'chocolate_jello')):
                 # obj.set_position([0.4357, 0, 1.38])
-                obj.rotate([0, 1.57, 0])
+                obj.rotate([1.57, 1.57, 0])
 
-            if ((name == 'crackers')):
-                obj.rotate([0, 1.57, 0])
+            if ((name == 'sugar')):
+                obj.rotate([1.57, 1.57, 0])
 
             # if(name == 'cupboard'):
             #     cupboard_pose = obj.get_position()
@@ -133,7 +133,7 @@ class Scene:
             # pos, quat_wxyz = sample_normal_pose(self._pos_scale, self._rot_scale)
             # gt_quat_wxyz = quaternion(pose[6], pose[3], pose[4], pose[5])
             # perturbed_quat_wxyz = quat_wxyz * gt_quat_wxyz
-
+            #
             # pose[:3] += pos
             # pose[3:] = [perturbed_quat_wxyz.x, perturbed_quat_wxyz.y, perturbed_quat_wxyz.z, perturbed_quat_wxyz.w]
 
@@ -158,8 +158,8 @@ class Scene:
 if __name__ == "__main__":
 
     # Initializes environment and task
-    # mode = "abs_joint_pos"
-    mode = "ee_pose_plan"
+    mode = "abs_joint_pos"
+    # mode = "ee_pose_plan"
     if (mode == "ee_pose_plan"):
         action_mode = ActionMode(ArmActionMode.ABS_EE_POSE_PLAN)  # See rlbench/action_modes.py for other action modes
     elif (mode == "abs_joint_pos"):
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     '''
     scene = Scene(env, task, mode)  # Initialize the scene
     scene.register_objs()  # Register all objects in the environment
-    # scene.preset_positions()
+    scene.preset_positions()
     '''
     Step 2: Forward Policy
     Place selected items in cupboard
