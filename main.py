@@ -77,12 +77,12 @@ class Scene:
         for obj in objs:
             name = obj.get_name()
 
-            if ((name == 'chocolate_jello')):
-                # obj.set_position([0.4357, 0, 1.38])
-                obj.rotate([1.57, 1.57, 0])
+            # if ((name == 'chocolate_jello')):
+            #     # obj.set_position([0.4357, 0, 1.38])
+            #     obj.rotate([1.57, 1.57, 0])
 
-            if ((name == 'sugar')):
-                obj.rotate([0, 1.57, 0])
+            if ((name == 'chocolate_jello')):
+                obj.rotate([1.57, 1.57, 0])
 
             if ((name == 'crackers')):
                 obj.rotate([1.57, 1.57, 0])
@@ -133,12 +133,12 @@ class Scene:
             name = obj.get_name()
             pose = obj.get_pose()
 
-            # pos, quat_wxyz = sample_normal_pose(self._pos_scale, self._rot_scale)
-            # gt_quat_wxyz = quaternion(pose[6], pose[3], pose[4], pose[5])
-            # perturbed_quat_wxyz = quat_wxyz * gt_quat_wxyz
-            #
-            # pose[:3] += pos
-            # pose[3:] = [perturbed_quat_wxyz.x, perturbed_quat_wxyz.y, perturbed_quat_wxyz.z, perturbed_quat_wxyz.w]
+            pos, quat_wxyz = sample_normal_pose(self._pos_scale, self._rot_scale)
+            gt_quat_wxyz = quaternion(pose[6], pose[3], pose[4], pose[5])
+            perturbed_quat_wxyz = quat_wxyz * gt_quat_wxyz
+
+            pose[:3] += pos
+            pose[3:] = [perturbed_quat_wxyz.x, perturbed_quat_wxyz.y, perturbed_quat_wxyz.z, perturbed_quat_wxyz.w]
 
             obj_poses[name] = pose
 
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     '''
     scene = Scene(env, task, mode)  # Initialize the scene
     scene.register_objs()  # Register all objects in the environment
-    scene.preset_positions()
+    # scene.preset_positions()
     '''
     Step 2: Forward Policy
     Place selected items in cupboard
@@ -191,6 +191,7 @@ if __name__ == "__main__":
     1. Reset the environment by removing items from the cupboard
     2. Rearrange the items on the table
     '''
+    print("*************************Beginning Reset***********************************")
     reset.reset_on_table(scene)
 
     env.shutdown()

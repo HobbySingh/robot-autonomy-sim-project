@@ -15,7 +15,7 @@ def get_mirror_poses(base_pose, delta=0.1):
     right = np.array(base_pose)
     left[1] -= delta
     right[1] += delta
-    return [left, right, base_pose]
+    return [left, right]
 
 
 def create_waypoint_sequence(place_point, scene):
@@ -39,7 +39,7 @@ def reset_to_cupboard(scene):
     for k, v in obj_poses.items():
         v[2] = v[2] + 0.035  # keep some distance b/w suction cup and object
         if 'grasp' in k:
-            if 'sugar' in k or 'mustard' in k or 'chocolate_jello' in k:
+            if 'strawberry' in k or 'sugar' in k:
                 gt_grasp_points.append((k, v))
             else:
                 pass

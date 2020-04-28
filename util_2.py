@@ -9,7 +9,7 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
     grasps = []
     pre_grasps = []
 
-    offset = 0
+    offset = 0.02
 
     quart_obj = obj_pose[-4:]
     r = R.from_quat(quart_obj)

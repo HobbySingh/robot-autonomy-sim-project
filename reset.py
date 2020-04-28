@@ -35,14 +35,16 @@ def reset_on_table(scene):
     env = scene._env
     objs = scene._env._scene._active_task.get_base().get_objects_in_tree(exclude_base=True, first_generation_only=False)
     # objs = scene.get_noisy_poses()
+    noisy_poses = scene.get_noisy_poses()
 
     for obj in objs[0:9]:
 
         obj_name = obj.get_name()
         print("Resetting object: ", obj_name)
 
-        if obj_name != 'sugar': continue
+        # if obj_name != 'sugar': continue
         pose = obj.get_pose()
+        pose = noisy_poses[obj_name]
         bb = obj.get_bounding_box()
         h = abs(bb[-2] - bb[-1])
 
@@ -66,9 +68,6 @@ def reset_on_table(scene):
                 gsp_pt = grasp_points.pop(0)
                 # pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
                 pre_gsp_pt = pre_grasp_points.pop(0)
-
-                if (i < 6):
-                    continue
 
                 print("Move to pre-grasp point for: ", obj_name)
                 scene.update(pre_gsp_pt, move_arm=True)
@@ -114,7 +113,7 @@ def reset_on_table(scene):
                     # ipdb.set_trace()
                     try:
                         print("Going to pre_place_pt with gripper close")
-                        scene.update(pre_place_pt, move_arm=True, ignore_collisions=True)
+                        scene.update(pre_place_pt, move_arm=True, ignore_collisions=False)
                         print("Going to place_pt with gripper close")
                         scene.update(place_pt, move_arm=True, ignore_collisions=True)
                         # ipdb.set_trace()
@@ -129,7 +128,7 @@ def reset_on_table(scene):
                 scene.update()
 
                 print("Going in air")
-                scene.update(pre_place_pt, move_arm=True)
+                scene.update(pre_place_pt, move_arm=True, ignore_collisions = True)
                 break
 
             except pyrep.errors.ConfigurationPathError:
