@@ -82,6 +82,9 @@ class Scene:
                 obj.rotate([1.57, 1.57, 0])
 
             if ((name == 'sugar')):
+                obj.rotate([0, 1.57, 0])
+
+            if ((name == 'crackers')):
                 obj.rotate([1.57, 1.57, 0])
 
             # if(name == 'cupboard'):
@@ -182,7 +185,7 @@ if __name__ == "__main__":
     Step 2: Forward Policy
     Place selected items in cupboard
     '''
-    forward.reset_to_cupboard(scene)
+    # forward.reset_to_cupboard(scene)
     '''
     Step 3: Reset
     1. Reset the environment by removing items from the cupboard

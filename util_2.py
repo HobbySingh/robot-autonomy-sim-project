@@ -9,7 +9,7 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
     grasps = []
     pre_grasps = []
 
-    offset = 0.035
+    offset = 0
 
     quart_obj = obj_pose[-4:]
     r = R.from_quat(quart_obj)
@@ -105,7 +105,7 @@ def get_approach_pose(obj_name, obj_pose, bounding_box, pose, incupboard = False
         for s in grasps:
             pos_wrt_global2 = obj_pose[0:3].copy()
             pos_wrt_global2[2] += 0.3
-            Rx = R.from_euler('xyz', [-180,0,-90], degrees=True)
+            Rx = R.from_euler('xyz', [-180,0,90], degrees=True)
 
             pre_grasps.append(np.append(pos_wrt_global2, Rx.as_quat()))
     

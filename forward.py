@@ -39,7 +39,7 @@ def reset_to_cupboard(scene):
     for k, v in obj_poses.items():
         v[2] = v[2] + 0.035  # keep some distance b/w suction cup and object
         if 'grasp' in k:
-            if 'jello' in k or 'mustard' in k:
+            if 'sugar' in k or 'mustard' in k or 'chocolate_jello' in k:
                 gt_grasp_points.append((k, v))
             else:
                 pass

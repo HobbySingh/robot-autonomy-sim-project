@@ -60,7 +60,7 @@ class BoundaryObject(object):
              maxy, minz, maxz) = boundary.get_model_bounding_box()
         else:
             minx, maxx, miny, maxy, minz, maxz = boundary.get_bounding_box()
-        minx = minx + 0.2
+        maxx = maxx - 0.12
         self._boundary_bbox = BoundingBox(minx, maxx, miny, maxy, minz, maxz)
 
         height = np.abs(maxz - minz)
@@ -113,9 +113,11 @@ class BoundaryObject(object):
         # obj.set_position(new_pos, self._boundary)
         # obj.rotate(list(rotation))
         new_pos = np.array(new_pos)
+        # ipdb.set_trace()
 
         if not ignore_collisions:
             for contained_obj in self._contained_objects:
+
                 # Check for collision between each child
                 for cont_ob in contained_obj.get_objects_in_tree(
                         exclude_base=False):
@@ -155,6 +157,9 @@ class BoundaryObject(object):
 
         new_pos = self._get_position_within_boundary(obj, obj_bbox)
 
+        # ipdb.set_trace()
+        print("Object under evaluation :", obj.get_name())
+        print("Proposed Point :", new_pos)
         if not ignore_collisions:
             for contained_obj in self._contained_objects:
                 # Check for collision between each child
@@ -164,11 +169,15 @@ class BoundaryObject(object):
                             exclude_base=True):
                         if placing_ob.check_collision(cont_ob):
                             return -2, new_pos, rotation
+
                 dist = np.linalg.norm(
-                    new_pos - contained_obj.get_position(self._boundary))
+                    new_pos[0:2] - contained_obj.get_position(self._boundary)[0:2])
+
+                print("Distance from ", contained_obj.get_name(), " is: ", dist)
                 if dist < min_distance:
                     return -3, new_pos, rotation
             # self._contained_objects.append(obj)
+        new_pos[0:3] += self._boundary.get_pose()[0:3]
         return 1, new_pos, rotation
 
 
@@ -210,6 +219,7 @@ class SpawnBoundary(object):
                 boundary_fails -= 1
             else:
                 break
+
         if boundary_fails <= 0:
             raise BoundaryError('Could not place within boundary.'
                                 'Perhaps the object is too big for it?')
@@ -246,6 +256,9 @@ class SpawnBoundary(object):
                 boundary_fails -= 1
             else:
                 break
+            print("Number of boundary fails :", boundary_fails)
+
+        print("Number of boundary fails :", boundary_fails)
         if boundary_fails <= 0:
             raise BoundaryError('Could not place within boundary.'
                                 'Perhaps the object is too big for it?')

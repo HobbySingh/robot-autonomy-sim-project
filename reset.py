@@ -11,17 +11,20 @@ import ipdb
 import pyrep
 import math
 from rlbench.backend.spawn_boundary import SpawnBoundary
+from rlbench.backend.exceptions import BoundaryError
+
 from pyrep.objects.shape import Shape
 from util_2 import get_approach_pose, get_approach_pose
 import time
+from scipy.spatial.transform import Rotation as R
 
-
-def place_upright(bbox, gsp_pt, Flag = False):
-    if Flag:
-        place_pt_upright = np.array(gsp_pt)
-        place_pt_upright[3:] = np.array([0.707**2,-0.707**2,0.707**2,-0.707**2])
-        place_pt_upright[2] = 0.85 + bbox[-1]
-    return place_pt_upright
+#
+# def place_upright(bbox, gsp_pt, Flag = False):
+#     if Flag:
+#         place_pt_upright = np.array(gsp_pt)
+#         place_pt_upright[3:] = np.array([0.707**2,-0.707**2,0.707**2,-0.707**2])
+#         place_pt_upright[2] = 0.85 + bbox[-1]
+#     return place_pt_upright
 
 
 def reset_on_table(scene):
@@ -38,7 +41,7 @@ def reset_on_table(scene):
         obj_name = obj.get_name()
         print("Resetting object: ", obj_name)
 
-        # if obj_name != 'chocolate_jello': break
+        if obj_name != 'sugar': continue
         pose = obj.get_pose()
         bb = obj.get_bounding_box()
         h = abs(bb[-2] - bb[-1])
@@ -57,11 +60,15 @@ def reset_on_table(scene):
         i = 0
         while grasp_points:
             i += 1
+
             print("Trying Grasp Pose: ", i)
             try:
                 gsp_pt = grasp_points.pop(0)
                 # pre_gsp_pt = scene.pre_grasp(gsp_pt.copy())
                 pre_gsp_pt = pre_grasp_points.pop(0)
+
+                if (i < 6):
+                    continue
 
                 print("Move to pre-grasp point for: ", obj_name)
                 scene.update(pre_gsp_pt, move_arm=True)
@@ -80,10 +87,23 @@ def reset_on_table(scene):
                     print("Trying new positions to randomly place")
 
                     shape_obj = Shape(obj_name)
-                    status, place_pt, rotation = scene._task._task.boundary.find_position_on_table(shape_obj, min_distance=0.1)
+                    try:
+                        status, place_pt, rotation = scene._task._task.boundary.find_position_on_table(shape_obj, min_distance=0.1)
+                        r = R.from_euler('xyz', rotation)
+                        # place_pt = np.array(place_pt + [r.as_quat()[3], r.as_quat()[2], 0, 0])
+                    except BoundaryError:
+                        print("Still finding valid point on table")
+                        continue
+
                     print("Random Point: ", place_pt)
-                    place_pt[2] = 0.75 + h + 0.025
-                    place_pt = np.array(place_pt + [-7.07106829e-01, -7.07106829e-01, -9.53326708e-06, -9.74050818e-06])
+                    print("Rotation ", r.as_quat())
+                    place_pt[2] = 0.75 + h + 0.01
+                    # ipdb.set_trace()
+                    if(scene._mode is "ee_pose_plan"):
+                        # place_pt = np.array(place_pt + [-7.07106829e-01, -7.07106829e-01, -9.53326708e-06, -9.74050818e-06])
+                        place_pt = np.array(place_pt + [r.as_quat()[3], r.as_quat()[2], -9.53326708e-06, -9.74050818e-06])
+                    else:
+                        place_pt = np.array(place_pt + [0.707, 0.707, 0, 0])
 
                     # if obj_name == 'crackers' or obj_name == 'chocolate_jello':
                     #     place_pt = place_upright(bb, gsp_pt, Flag = True)
@@ -96,7 +116,8 @@ def reset_on_table(scene):
                         print("Going to pre_place_pt with gripper close")
                         scene.update(pre_place_pt, move_arm=True, ignore_collisions=True)
                         print("Going to place_pt with gripper close")
-                        scene.update(place_pt, move_arm=True)
+                        scene.update(place_pt, move_arm=True, ignore_collisions=True)
+                        # ipdb.set_trace()
                         break
                     except:
                         print("Path not found")
